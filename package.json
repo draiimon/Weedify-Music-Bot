@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@octokit/rest": "^22.0.0",
     "console": "^0.7.2",
     "crypto": "^1.0.1",
     "discord.js": "^14.22.0",
@@ -19,6 +20,7 @@
     "genius-lyrics-api": "^3.2.1",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.2",
+    "node-fetch": "^3.3.2",
     "path": "^0.12.7",
     "process": "^0.11.10",
     "riffy": "^1.0.7"

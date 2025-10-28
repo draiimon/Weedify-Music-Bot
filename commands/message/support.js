@@ -1,13 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
-const shiva = require('../../shiva');
 
-const COMMAND_SECURITY_TOKEN = shiva.SECURITY_TOKEN;
+
+
 
 module.exports = {
     name: 'support',
     description: 'Get support server and contact information',
-    securityToken: COMMAND_SECURITY_TOKEN,
-    
     async execute(message) {
         if (!shiva || !shiva.validateCore || !shiva.validateCore()) {
             const embed = new EmbedBuilder()
@@ -15,9 +13,6 @@ module.exports = {
                 .setColor('#FF0000');
             return message.reply({ embeds: [embed] }).catch(() => {});
         }
-
-        message.shivaValidated = true;
-        message.securityToken = COMMAND_SECURITY_TOKEN;
 
         try {
             const embed = new EmbedBuilder()

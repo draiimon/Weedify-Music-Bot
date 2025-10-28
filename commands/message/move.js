@@ -1,14 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
-const shiva = require('../../shiva');
 
-const COMMAND_SECURITY_TOKEN = shiva.SECURITY_TOKEN;
+
+
 
 module.exports = {
     name: 'move',
     aliases: ['mv', 'movetrack'],
     description: 'Move a song to different position in queue',
-    securityToken: COMMAND_SECURITY_TOKEN,
-    
     async execute(message, args, client) {
         if (!shiva || !shiva.validateCore || !shiva.validateCore()) {
             const embed = new EmbedBuilder()
@@ -16,9 +14,6 @@ module.exports = {
                 .setColor('#FF0000');
             return message.reply({ embeds: [embed] }).catch(() => {});
         }
-
-        message.shivaValidated = true;
-        message.securityToken = COMMAND_SECURITY_TOKEN;
 
         const from = parseInt(args[0]);
         const to = parseInt(args[1]);

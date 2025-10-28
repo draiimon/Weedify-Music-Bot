@@ -1,25 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
-const shiva = require('../../shiva');
-
-const COMMAND_SECURITY_TOKEN = shiva.SECURITY_TOKEN;
 
 module.exports = {
     name: 'volume',
     aliases: ['vol', 'v', 'lakas'],
     description: 'Ayusin yung lakas ng tugtog (1-100)',
-    securityToken: COMMAND_SECURITY_TOKEN,
-    
-    async execute(message, args, client) {
-        if (!shiva || !shiva.validateCore || !shiva.validateCore()) {
-            const embed = new EmbedBuilder()
-                .setDescription('❌ May sira yung system pre - Di muna pwede')
-                .setColor('#FF0000');
-            return message.reply({ embeds: [embed] }).catch(() => {});
-        }
-
-        message.shivaValidated = true;
-        message.securityToken = COMMAND_SECURITY_TOKEN;
-        
+    async execute(message, args, client) {        
         const volume = parseInt(args[0]);
         
         if (!volume || volume < 1 || volume > 100) {

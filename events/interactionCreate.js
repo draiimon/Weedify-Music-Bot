@@ -1,5 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const shiva = require('../shiva');
 
 module.exports = {
     name: 'interactionCreate',
@@ -14,56 +13,10 @@ module.exports = {
                 });
             }
 
-            if (!shiva || !shiva.validateCore || !shiva.validateCore()) {
-                const embed = new EmbedBuilder()
-                    .setDescription('❌ System core offline - Commands unavailable')
-                    .setColor('#FF0000');
-                return interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
-            }
-
-            if (!command.securityToken || command.securityToken !== shiva.SECURITY_TOKEN) {
-                
-                const securityEmbed = new EmbedBuilder()
-                    .setDescription('❌ Command blocked - Security validation required')
-                    .setColor('#FF6600');
-                
-                return interaction.reply({ embeds: [securityEmbed], ephemeral: true }).catch(() => {});
-            }
-
             try {
                 await command.execute(interaction, client);
-
-                if (!interaction.shivaValidated || !interaction.securityToken || interaction.securityToken !== shiva.SECURITY_TOKEN) {
-                  
-                    const warningEmbed = new EmbedBuilder()
-                        .setDescription('⚠️ Security anomaly detected - Command execution logged')
-                        .setColor('#FF6600');
-                    
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ embeds: [warningEmbed], ephemeral: true }).catch(() => {});
-                    }
-                    return;
-                }
-
-              
-
             } catch (error) {
                 console.error('Error executing slash command:', error);
-                
-                if (error.message.includes('shiva') || error.message.includes('validateCore')) {
-                    const securityEmbed = new EmbedBuilder()
-                        .setDescription('❌ System security modules offline - Commands unavailable')
-                        .setColor('#FF0000');
-                    
-                    const reply = { embeds: [securityEmbed], ephemeral: true };
-                    
-                    if (interaction.replied || interaction.deferred) {
-                        await interaction.followUp(reply).catch(() => {});
-                    } else {
-                        await interaction.reply(reply).catch(() => {});
-                    }
-                    return;
-                }
                 
                 const reply = {
                     content: 'There was an error executing this command!',
@@ -79,12 +32,12 @@ module.exports = {
         }
         
         else if (interaction.isButton()) {
-            await handleSecureMusicButton(interaction, client);
+            await handleMusicButton(interaction, client);
         }
     }
 };
 
-async function handleSecureMusicButton(interaction, client) {
+async function handleMusicButton(interaction, client) {
     if (interaction.customId === 'music_support') return;
     
     const ConditionChecker = require('../utils/checks');
@@ -120,7 +73,6 @@ async function handleSecureMusicButton(interaction, client) {
             });
         }
 
-
         const canUseMusic = await checker.canUseMusic(interaction.guild.id, interaction.user.id);
         if (!canUseMusic) {
             return interaction.reply({
@@ -128,7 +80,6 @@ async function handleSecureMusicButton(interaction, client) {
                 ephemeral: true
             });
         }
-
 
         const player = conditions.player;
         const action = interaction.customId.replace('music_', '');
@@ -263,7 +214,6 @@ async function handleSecureMusicButton(interaction, client) {
                 });
         }
 
-
         async function updateCentralEmbed() {
             if (player && player.current) {
                 const playerInfo = {
@@ -282,7 +232,7 @@ async function handleSecureMusicButton(interaction, client) {
         }
 
     } catch (error) {
-        console.error('Error handling secure music button:', error);
+        console.error('Error handling music button:', error);
         await interaction.reply({
             content: '❌ An error occurred while processing your request',
             ephemeral: true

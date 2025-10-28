@@ -1,25 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
-const shiva = require('../../shiva');
-
-const COMMAND_SECURITY_TOKEN = shiva.SECURITY_TOKEN;
 
 module.exports = {
     name: 'resume',
     aliases: ['r', 'continue', 'tuloy'],
     description: 'Tuloy ang laban! Resume na!',
-    securityToken: COMMAND_SECURITY_TOKEN,
-    
-    async execute(message, args, client) {
-        if (!shiva || !shiva.validateCore || !shiva.validateCore()) {
-            const embed = new EmbedBuilder()
-                .setDescription('❌ May sira yung system pre - Di muna pwede')
-                .setColor('#FF0000');
-            return message.reply({ embeds: [embed] }).catch(() => {});
-        }
-
-        message.shivaValidated = true;
-        message.securityToken = COMMAND_SECURITY_TOKEN;
-        
+    async execute(message, args, client) {        
         const ConditionChecker = require('../../utils/checks');
         const checker = new ConditionChecker(client);
         

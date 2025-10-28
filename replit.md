@@ -1,106 +1,171 @@
-# 🔥 Weedify Music Bot
+# Weedify Music Bot
 
-## Project Overview
-Weedify is a Discord music bot with **Tagalog commands** and **maangas (cool/edgy)** response style. Built on the UltimateMusic bot framework, customized with Filipino language and culture.
+## Overview
 
-**Status:** ✅ RUNNING  
-**Bot Name:** Weedify#0724  
-**Command Prefix:** `g!`  
-**Language:** Tagalog with English alternatives
-
-## Recent Changes (Oct 28, 2025)
-- ✅ Cloned UltimateMusic bot base
-- ✅ Updated config with `g!` prefix and Weedify branding
-- ✅ Converted all 18 message commands to Tagalog
-- ✅ Updated utility error messages to Tagalog
-- ✅ Fixed Lavalink server to working public node (SSL)
-- ✅ Created comprehensive README and .env.example
-- ✅ Bot successfully running with MongoDB + Lavalink connected
-
-## Architecture
-
-### Tech Stack
-- **Discord.js v14** - Discord bot framework
-- **Riffy** - Lavalink client for music playback
-- **MongoDB/Mongoose** - Database for server settings
-- **Express** - Web server (port 3000)
-- **Node.js 20** - Runtime
-
-### Project Structure
-```
-.
-├── commands/
-│   ├── message/      # Prefix commands (g!)
-│   └── slash/        # Slash commands (/)
-├── database/         # MongoDB connection
-├── events/           # Discord event handlers
-├── models/           # Mongoose schemas
-├── utils/            # Helper utilities
-├── config.js         # Bot configuration
-├── main.js           # Bot initialization
-├── index.js          # Entry point + web server
-└── shiva.js          # Security module
-```
-
-## Commands (g! prefix)
-
-### Music Commands
-- `g!play <kanta>` - Play music (aliases: p, tugtog, tugtugin)
-- `g!skip` - Skip current song (aliases: s, laktaw, lipat)
-- `g!stop` - Stop and disconnect (aliases: dc, alis, tigil)
-- `g!pause` - Pause playback (aliases: sandali, hinto)
-- `g!resume` - Resume playback (aliases: r, tuloy)
-- `g!queue` - Show queue (aliases: q, pila, listahan)
-- `g!nowplaying` - Current song info (aliases: np, ngayon, anoyan)
-- `g!volume <1-100>` - Adjust volume (aliases: vol, v, lakas)
-- `g!loop <mode>` - Set loop mode (aliases: repeat, ulit)
-- `g!shuffle` - Shuffle queue (aliases: mix, sh, halo)
-- `g!join` - Join voice channel (aliases: halika, tara)
-
-### Info Commands
-- `g!help` - Show all commands (aliases: h, tulong)
-- `g!ping` - Check bot latency (aliases: pong, latency)
-
-## Configuration
-
-### Required Secrets (Set in Replit)
-- `TOKEN` - Discord bot token
-- `MONGODB_URI` - MongoDB connection string
-
-### Optional Environment Variables
-- `BOT_PREFIX` - Command prefix (default: `g!`)
-- `LAVALINK_HOST` - Lavalink server host
-- `LAVALINK_PORT` - Lavalink server port
-- `LAVALINK_PASSWORD` - Lavalink password
-- `LAVALINK_SECURE` - SSL enabled (true/false)
-
-### Current Lavalink Server
-- Host: `lava-all.ajieblogs.eu.org`
-- Port: `443` (SSL)
-- Password: `https://dsc.gg/ajidevserver`
-- Status: ✅ Connected
+Weedify is a Discord music bot that streams high-quality audio from YouTube and other sources using Lavalink. The bot features both traditional prefix commands (w!) and modern slash commands, with a unique "central music system" that allows users to control music by simply typing song names in a designated channel. The bot is written in Tagalog/Filipino with a casual, friendly tone.
 
 ## User Preferences
-- Language: Tagalog with "maangas" (cool/edgy) tone
-- Command prefix: `g!`
-- Bot personality: Casual, friendly, street-smart Filipino style
 
-## Known Issues / Notes
-- Public Lavalink servers may have downtime - monitor uptime
-- Bot requires both Discord token and MongoDB to run
-- Music playback requires working Lavalink connection
-- Port 3000 used for Express web server (status page)
+Preferred communication style: Simple, everyday language.
 
-## Next Steps (Optional)
-1. Add custom Lavalink server for better reliability
-2. Implement more Tagalog slash commands
-3. Add Filipino music source plugins
-4. Create custom emojis for Filipino vibe
-5. Add DJ role permissions system
+## System Architecture
 
-## Support
-For issues or questions, check the README.md or create an issue.
+### Core Technology Stack
 
----
-**Last Updated:** October 28, 2025  
-**Bot Version:** 1.0.0 (Weedify Edition)
+**Runtime Environment:**
+- Node.js 18+ with Discord.js v14 for Discord API interactions
+- Express.js web server on port 5000 for health checks and basic web interface
+
+**Audio Processing:**
+- Riffy audio library for music playback management
+- Lavalink server (external) for high-quality audio streaming and transcoding
+- Default Lavalink host: lava-all.ajieblogs.eu.org:443 (HTTPS enabled)
+
+**Data Persistence:**
+- MongoDB via Mongoose ODM for server configuration storage
+- Single Server model schema storing central system setup, auto-VC settings, and bot preferences per guild
+
+### Bot Architecture
+
+**Command System:**
+The bot implements a triple command pattern:
+1. **Prefix Commands** - Traditional text commands with `w!` prefix (e.g., `w!play`, `w!skip`)
+2. **Slash Commands** - Discord's native slash command system (`/play`, `/queue`)
+3. **Mention Commands** - Commands triggered by mentioning the bot
+
+All three command types share common business logic through utility classes, ensuring consistent behavior across interfaces.
+
+**Central Music System:**
+A unique feature allowing users to control music without traditional commands. When enabled:
+- Admins set up a designated text channel with an embedded control panel
+- Users type song names/URLs directly in the channel (no prefix required)
+- Bot automatically processes these as music requests
+- Optional voice channel binding restricts playback to specific VC
+- Role-based permissions control who can use the system
+
+**Player Management:**
+- PlayerHandler utility class manages Riffy player lifecycle
+- Players are created per-guild with voice/text channel binding
+- Queue system supports track queueing, shuffling, looping (track/queue modes)
+- Volume control ranges from 1-100%
+- Automatic player cleanup when voice channels empty
+
+### Event-Driven Architecture
+
+**Core Events:**
+- `ready` - Bot initialization, command registration, central embed deployment
+- `messageCreate` - Handles prefix/mention commands and central system song requests
+- `interactionCreate` - Processes slash commands and button interactions
+
+**Player Events (Riffy):**
+- Track start/end events for queue progression
+- Error handling for playback failures
+- Voice state updates for connection management
+
+### Utility Systems
+
+**Condition Checking:**
+ConditionChecker class validates music command preconditions:
+- User voice channel presence
+- Bot-user voice channel matching
+- Active player existence
+- Central system configuration state
+- Permission validation
+
+**Embed Management:**
+- EmbedUtils provides standardized embed creation (success/error/music)
+- CentralEmbedHandler manages the persistent control panel embed
+- Dynamic embed updates for now-playing information
+
+**Status Management:**
+StatusManager synchronizes bot presence with current playback:
+- Updates Discord activity to show currently playing track
+- Manages voice channel status (when supported)
+- Periodic status rotation when idle
+
+**Memory Management:**
+GarbageCollector utility implements:
+- Periodic garbage collection every 10 minutes
+- Memory usage monitoring with automatic cleanup at 150MB threshold
+- Manual cleanup command for administrators
+
+### Configuration System
+
+Centralized config.js with environment variable fallbacks:
+- Discord bot token
+- MongoDB connection URI
+- Lavalink server credentials (host, port, password, SSL)
+- Bot preferences (prefix, owner IDs, embed colors)
+- Feature flags (autoplay, central system, auto-VC creation, status updates)
+
+### Database Schema
+
+**Server Model:**
+- `_id`: Guild ID (string, not ObjectId)
+- `centralSetup`: Object containing enabled flag, channel IDs, embed ID, voice channel binding, allowed roles
+- `autoVcSetup`: Auto voice channel creation settings (disabled by default)
+- `settings`: Per-guild preferences including custom prefix, autoplay toggle, default volume, DJ role
+
+### Security & Permissions
+
+**License Restrictions:**
+AGPL-3.0 with custom no-selling clause prohibiting commercial use or derivative sales. Credits must be maintained.
+
+**Permission Checks:**
+- Admin commands require ManageChannels permission
+- Music commands validate voice channel join permissions
+- Central system enforces optional role-based access control
+- Owner-only commands (cleanup) check against hardcoded owner ID list
+
+### Error Handling
+
+ErrorHandler utility provides:
+- Centralized error logging with context information
+- Safe execution wrapper for async operations with fallbacks
+- Production/development mode logging (stack traces only in dev)
+- Safe Discord reaction handling to prevent uncaught rejections
+
+### Performance Optimizations
+
+- Garbage collection monitoring and forced cleanup
+- Player cleanup on inactivity
+- Message content caching disabled for memory efficiency
+- Queue pagination to prevent embed overflow (15 songs per page)
+- Lazy loading of audio tracks from Lavalink
+
+### Deployment Considerations
+
+**Required Environment Variables:**
+- `TOKEN` - Discord bot token
+- `MONGODB_URI` - MongoDB connection string
+- `LAVALINK_HOST`, `LAVALINK_PORT`, `LAVALINK_PASSWORD` - Audio server credentials (defaults provided)
+
+**Scaling Limitations:**
+- Single Lavalink node configuration (no load balancing)
+- In-memory queue storage (not persistent across restarts)
+- Central system limited to one setup per guild
+
+## External Dependencies
+
+**Discord Services:**
+- Discord.js v14 library for bot-Discord communication
+- Discord Gateway WebSocket connection for real-time events
+- Discord REST API for slash command registration
+
+**Audio Infrastructure:**
+- External Lavalink server (lava-all.ajieblogs.eu.org) for audio processing
+- YouTube as primary audio source (free version limitation)
+- Riffy library as Lavalink client wrapper
+
+**Database:**
+- MongoDB for persistent server configuration storage
+- Mongoose ODM for schema validation and queries
+
+**Web Services:**
+- Express.js for basic HTTP health endpoint
+- genius-lyrics-api dependency (installed but unused in visible code)
+
+**Node.js Built-ins:**
+- fs/path for file system operations (command loading)
+- crypto for cryptographic operations
+- process for environment variables and graceful shutdown

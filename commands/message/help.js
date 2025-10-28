@@ -1,27 +1,12 @@
 const { EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const shiva = require('../../shiva');
-
-const COMMAND_SECURITY_TOKEN = shiva.SECURITY_TOKEN;
 
 module.exports = {
     name: 'help',
     aliases: ['h', 'tulong', 'commands'],
     description: 'Listahan ng lahat ng commands',
-    securityToken: COMMAND_SECURITY_TOKEN,
-
     async execute(message, args, client) {
-        if (!shiva || !shiva.validateCore || !shiva.validateCore()) {
-            const embed = new EmbedBuilder()
-                .setDescription('❌ May sira yung system pre - Di muna pwede')
-                .setColor('#FF0000');
-            return message.reply({ embeds: [embed] }).catch(() => {});
-        }
-
-        message.shivaValidated = true;
-        message.securityToken = COMMAND_SECURITY_TOKEN;
-
         try {
             const msgCommandsPath = path.join(__dirname, '..', 'message');
             const msgFiles = fs.readdirSync(msgCommandsPath).filter(file => file.endsWith('.js'));

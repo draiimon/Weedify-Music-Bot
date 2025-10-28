@@ -191,6 +191,59 @@ class PlayerHandler {
                 if (this.client.statusManager) {
                     await this.client.statusManager.onTrackEnd(player.guildId);
                 }
+                
+                if (track && track.info && player.textChannel) {
+                    try {
+                        const channel = await this.client.channels.fetch(player.textChannel);
+                        if (channel && channel.isTextBased()) {
+                            const { EmbedBuilder } = require('discord.js');
+                            const finishedThumbnail = await this.getThumbnailSafely(track);
+                            
+                            const finishedEmbed = new EmbedBuilder()
+                                .setColor(0x808080)
+                                .setTitle('✅ Tapos na / Song Finished')
+                                .setDescription(`**${track.info.title}**\nby ${track.info.author || 'Unknown Artist'}`)
+                                .setFooter({ text: `Requested by ${track.info.requester?.username || 'Unknown'}` })
+                                .setTimestamp();
+                            
+                            if (finishedThumbnail) {
+                                finishedEmbed.setThumbnail(finishedThumbnail);
+                            }
+                            
+                            await channel.send({ embeds: [finishedEmbed] });
+                            console.log(`📢 Announced finished song: ${track.info.title}`);
+                        }
+                    } catch (channelError) {
+                        console.error('Failed to send finished song announcement:', channelError.message);
+                    }
+                }
+                
+                const nextTrack = player.queue[0];
+                if (nextTrack && nextTrack.info && player.textChannel) {
+                    try {
+                        const channel = await this.client.channels.fetch(player.textChannel);
+                        if (channel && channel.isTextBased()) {
+                            const { EmbedBuilder } = require('discord.js');
+                            const thumbnail = await this.getThumbnailSafely(nextTrack);
+                            
+                            const embed = new EmbedBuilder()
+                                .setColor(0x00FF00)
+                                .setTitle('🎵 Susunod na Kanta / Next Up')
+                                .setDescription(`**${nextTrack.info.title}**\nby ${nextTrack.info.author || 'Unknown Artist'}`)
+                                .setFooter({ text: `Requested by ${nextTrack.info.requester?.username || 'Unknown'}` })
+                                .setTimestamp();
+                            
+                            if (thumbnail) {
+                                embed.setThumbnail(thumbnail);
+                            }
+                            
+                            await channel.send({ embeds: [embed] });
+                            console.log(`📢 Announced next song: ${nextTrack.info.title}`);
+                        }
+                    } catch (channelError) {
+                        console.error('Failed to send next song announcement:', channelError.message);
+                    }
+                }
             } catch (error) {
                 console.error('Track end error (handled):', error.message);
             }
@@ -211,15 +264,33 @@ class PlayerHandler {
                 if (player.isAutoplay) {
                     player.autoplay(player);
                 } else {
+                    if (player.textChannel) {
+                        try {
+                            const channel = await this.client.channels.fetch(player.textChannel);
+                            if (channel && channel.isTextBased()) {
+                                const { EmbedBuilder } = require('discord.js');
+                                
+                                const embed = new EmbedBuilder()
+                                    .setColor(0xFF6B6B)
+                                    .setTitle('⏹️ Walang Tumutugtog / No Music Playing')
+                                    .setDescription('Ang queue ay ubos na. Mag-add ng kanta gamit ang `w!play` o `/play`!')
+                                    .setTimestamp();
+                                
+                                await channel.send({ embeds: [embed] });
+                                console.log(`📢 Announced queue end in ${player.guildId}`);
+                            }
+                        } catch (channelError) {
+                            console.error('Failed to send queue end announcement:', channelError.message);
+                        }
+                    }
+                    
                     if (this.client.statusManager) {
                         await this.client.statusManager.onPlayerDisconnect(player.guildId);
                     }
-                    // player.destroy(); // Disabled: Bot stays connected 24/7
                 }
             } catch (error) {
                 console.error('Queue end error:', error.message);
                 try {
-                    // player.destroy(); // Disabled: Bot stays connected 24/7
                 } catch (destroyError) {
                     console.error('Player destroy error:', destroyError.message);
                 }
