@@ -4,6 +4,22 @@
 
 Weedify is a Discord music bot that streams high-quality audio from YouTube and other sources using Lavalink. The bot features both traditional prefix commands (w!) and modern slash commands, with a unique "central music system" that allows users to control music by simply typing song names in a designated channel. The bot is written in Tagalog/Filipino with a casual, friendly tone.
 
+## Recent Updates (October 31, 2025)
+
+**Render Deployment Optimizations:**
+Fixed critical "unknown node" issue that required constant server restarts on Render:
+- Added automatic voice channel disconnect when queue ends (saves resources)
+- Implemented 5-minute idle timeout system to prevent stale connections
+- Enhanced Lavalink node reconnection with automatic retry logic (3-5 second intervals)
+- Built-in HTTP server with `/health`, `/ping` endpoints for Render keep-alive
+- Improved garbage collection with player cleanup at 200MB memory threshold
+- Made MongoDB connection optional with graceful degradation
+- Bot now stays connected on Render without manual restarts
+
+**New Files Added:**
+- `server.js` - Express HTTP server for Render deployment
+- `utils/idleTracker.js` - Idle timeout management system
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -14,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 
 **Runtime Environment:**
 - Node.js 18+ with Discord.js v14 for Discord API interactions
-- Express.js web server on port 5000 for health checks and basic web interface
+- Express.js web server on port 3000 for health checks, keep-alive endpoints, and basic web interface
 
 **Audio Processing:**
 - Riffy audio library for music playback management
@@ -48,7 +64,9 @@ A unique feature allowing users to control music without traditional commands. W
 - Players are created per-guild with voice/text channel binding
 - Queue system supports track queueing, shuffling, looping (track/queue modes)
 - Volume control ranges from 1-100%
-- Automatic player cleanup when voice channels empty
+- **Auto-disconnect on queue end** - Bot leaves voice channel when songs finish (saves resources)
+- **Idle timeout system** - IdleTracker disconnects bot after 5 minutes of inactivity
+- Automatic player cleanup for memory optimization
 
 ### Event-Driven Architecture
 
@@ -85,9 +103,19 @@ StatusManager synchronizes bot presence with current playback:
 
 **Memory Management:**
 GarbageCollector utility implements:
-- Periodic garbage collection every 10 minutes
-- Memory usage monitoring with automatic cleanup at 150MB threshold
+- Periodic garbage collection every 5 minutes  
+- Memory usage monitoring with automatic cleanup at 200MB threshold
+- Player status logging every 10 minutes (active vs idle)
+- Automatic idle player destruction when memory is high
 - Manual cleanup command for administrators
+
+**Idle Tracking:**
+IdleTracker class manages connection timeouts:
+- 5-minute idle timeout per guild
+- Starts timer when queue ends or track finishes with empty queue
+- Clears timer when new track starts playing
+- Sends notification before disconnecting
+- Automatic cleanup of all timers on bot shutdown
 
 ### Configuration System
 

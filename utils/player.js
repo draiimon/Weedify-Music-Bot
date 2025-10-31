@@ -1,9 +1,11 @@
 const CentralEmbedHandler = require('./centralEmbed');
+const IdleTracker = require('./idleTracker');
 
 class PlayerHandler {
     constructor(client) {
         this.client = client;
         this.centralEmbed = new CentralEmbedHandler(client);
+        this.idleTracker = new IdleTracker(client);
     }
 
     async createPlayer(guildId, voiceChannelId, textChannelId, options = {}) {
@@ -159,6 +161,8 @@ class PlayerHandler {
                 const trackTitle = track?.info?.title || 'Unknown Track';
                 console.log(`🎵 Started playing: ${trackTitle} in ${player.guildId}`);
                 
+                this.idleTracker.clearIdleTimer(player.guildId);
+                
                 if (this.client.statusManager) {
                     await this.client.statusManager.onTrackStart(player.guildId);
                 }
@@ -187,6 +191,10 @@ class PlayerHandler {
             try {
                 const trackTitle = track?.info?.title || 'Unknown Track';
                 console.log(`🎵 Finished playing: ${trackTitle} in ${player.guildId}`);
+                
+                if (player.queue.size === 0) {
+                    this.idleTracker.startIdleTimer(player.guildId);
+                }
                 
                 if (this.client.statusManager) {
                     await this.client.statusManager.onTrackEnd(player.guildId);
@@ -273,7 +281,8 @@ class PlayerHandler {
                                 const embed = new EmbedBuilder()
                                     .setColor(0xFF6B6B)
                                     .setTitle('⏹️ Walang Tumutugtog / No Music Playing')
-                                    .setDescription('Ang queue ay ubos na. Mag-add ng kanta gamit ang `w!play` o `/play`!')
+                                    .setDescription('Ang queue ay ubos na. Umalis na ako sa voice channel para makatipid sa resources!')
+                                    .setFooter({ text: 'I-play ulit gamit ang w!play o /play' })
                                     .setTimestamp();
                                 
                                 await channel.send({ embeds: [embed] });
@@ -287,10 +296,24 @@ class PlayerHandler {
                     if (this.client.statusManager) {
                         await this.client.statusManager.onPlayerDisconnect(player.guildId);
                     }
+                    
+                    setTimeout(async () => {
+                        try {
+                            if (player && !player.playing && player.queue.size === 0) {
+                                console.log(`🚪 Auto-disconnecting from ${player.guildId} - queue empty`);
+                                player.destroy();
+                            }
+                        } catch (destroyError) {
+                            console.error('Player auto-disconnect error:', destroyError.message);
+                        }
+                    }, 3000);
                 }
             } catch (error) {
                 console.error('Queue end error:', error.message);
                 try {
+                    if (player && !player.playing) {
+                        player.destroy();
+                    }
                 } catch (destroyError) {
                     console.error('Player destroy error:', destroyError.message);
                 }
@@ -308,6 +331,8 @@ class PlayerHandler {
         this.client.riffy.on('playerDisconnect', async (player) => {
             try {
                 console.log(`🎵 Player destroyed for guild ${player.guildId}`);
+                
+                this.idleTracker.clearIdleTimer(player.guildId);
                 
                 if (this.client.statusManager) {
                     await this.client.statusManager.onPlayerDisconnect(player.guildId);

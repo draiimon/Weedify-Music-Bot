@@ -30,8 +30,9 @@
    - **Name**: `weedify-bot` (or any name you want)
    - **Environment**: `Node`
    - **Build Command**: `npm install`
-   - **Start Command**: `node index.js`
+   - **Start Command**: `node main.js`
    - **Plan**: Free (or paid if you need always-on)
+   - **Health Check Path**: `/health` (optional but recommended)
 
 ## Step 3: Set Environment Variables
 
@@ -99,10 +100,27 @@ In the Render dashboard, add these environment variables:
 
 ## Keep Bot Always Online (Free Method)
 
+The bot now includes a built-in HTTP server with health check endpoints!
+
 Use a service like **UptimeRobot** or **Cron-Job.org** to ping your bot every 14 minutes:
 1. Get your Render service URL (e.g., `https://weedify-bot.onrender.com`)
-2. Set up a monitor to ping it every 14 minutes
+2. Set up a monitor to ping `https://weedify-bot.onrender.com/health` every 14 minutes
 3. This keeps your bot active on the free tier
+
+**Health Check Endpoints:**
+- `/` - Main page showing bot status
+- `/health` - Detailed health information (bot status, memory, Lavalink connection)
+- `/ping` - Simple ping endpoint for uptime monitors
+
+## Auto-Disconnect Features (NEW!)
+
+The bot now automatically manages connections to save resources:
+- **Auto-disconnect after queue ends** - Leaves voice channel when no more songs
+- **5-minute idle timeout** - Disconnects if inactive for 5 minutes
+- **Automatic Lavalink reconnection** - Reconnects to Lavalink node if connection drops
+- **Memory optimization** - Cleans up idle players automatically
+
+**This prevents the "unknown node" error you were experiencing on Render!**
 
 ## Support
 

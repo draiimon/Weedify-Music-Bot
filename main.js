@@ -15,6 +15,7 @@ const connectDatabase = require('./database/connection');
 const PlayerHandler = require('./utils/player');
 const StatusManager = require('./utils/statusManager');
 const GarbageCollector = require('./utils/garbageCollector');
+const createServer = require('./server');
 require('dotenv').config();
 
 /**
@@ -67,11 +68,39 @@ function initializeAudio(client) {
     
     // Setup Riffy event handlers
     riffy.on('nodeConnect', (node) => {
-        console.log(`🎵 Lavalink node "${node.name}" connected`);
+        console.log(`✅ Lavalink node "${node.name}" connected successfully`);
     });
     
     riffy.on('nodeError', (node, error) => {
         console.error(`🔴 Lavalink node "${node.name}" error:`, error.message);
+        
+        setTimeout(() => {
+            if (!node.connected) {
+                console.log(`🔄 Attempting to reconnect to Lavalink node "${node.name}"...`);
+                try {
+                    node.connect();
+                } catch (reconnectError) {
+                    console.error(`❌ Failed to reconnect to node:`, reconnectError.message);
+                }
+            }
+        }, 5000);
+    });
+    
+    riffy.on('nodeDisconnect', (node, reason) => {
+        console.warn(`⚠️ Lavalink node "${node.name}" disconnected. Reason:`, reason);
+        
+        setTimeout(() => {
+            console.log(`🔄 Attempting to reconnect to Lavalink node "${node.name}"...`);
+            try {
+                node.connect();
+            } catch (reconnectError) {
+                console.error(`❌ Failed to reconnect to node:`, reconnectError.message);
+            }
+        }, 3000);
+    });
+    
+    riffy.on('nodeReconnect', (node) => {
+        console.log(`🔄 Reconnecting to Lavalink node "${node.name}"...`);
     });
     
     // Handle voice state updates
@@ -153,8 +182,12 @@ async function bootstrap() {
         client.playerHandler = new PlayerHandler(client);
         
         // Connect to database
-        await connectDatabase();
-        console.log('✅ MongoDB connected successfully');
+        const dbConnection = await connectDatabase();
+        if (dbConnection) {
+            console.log('✅ MongoDB connected successfully');
+        } else {
+            console.warn('⚠️ Running without MongoDB - features limited');
+        }
         
         // Load commands and events
         const messageCommands = loadMessageCommands(client);
@@ -165,7 +198,7 @@ async function bootstrap() {
         console.log(`✅ Loaded ${events} events`);
         
         // Initialize memory optimization
-        GarbageCollector.init();
+        GarbageCollector.init(client);
         
         // Initialize audio system
         initializeAudio(client);
@@ -176,6 +209,9 @@ async function bootstrap() {
         // Login to Discord
         const token = config.discord.token || process.env.TOKEN;
         await client.login(token);
+        
+        // Start HTTP server for Render deployment
+        createServer(client);
         
     } catch (error) {
         console.error('❌ Failed to initialize bot:', error);
