@@ -323,15 +323,31 @@ class VoiceRecognition {
             const pythonScriptPath = path.join(__dirname, '..', 'python', 'tts_gen.py');
             const safeText = text.replace(/"/g, '\\"');
 
-            // 1. Generate Audio file
+            // 1. Generate Audio file using spawn (Safer than exec)
+            const { spawn } = require('child_process');
+
             await new Promise((resolve, reject) => {
-                exec(`python3 "${pythonScriptPath}" "${safeText}" "${audioPath}"`, (error, stdout, stderr) => {
-                    if (error) {
-                        console.error('TTS Exe Error:', error);
-                        reject(error);
+                const child = spawn('python3', [pythonScriptPath, text, audioPath]);
+
+                let stderrData = '';
+
+                child.stderr.on('data', (data) => {
+                    stderrData += data.toString();
+                });
+
+                child.on('close', (code) => {
+                    if (code !== 0) {
+                        console.error(`TTS Process exited with code ${code}`);
+                        console.error(`TTS Stderr: ${stderrData}`);
+                        reject(new Error(`TTS failed with code ${code}`));
                     } else {
                         resolve();
                     }
+                });
+
+                child.on('error', (err) => {
+                    console.error('Failed to start TTS process:', err);
+                    reject(err);
                 });
             });
 

@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     libtool \
     autoconf \
     automake \
+    libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Edge-TTS (Python Dependency)

@@ -88,15 +88,16 @@ module.exports = {
 
             // Execute Python script: python3 tts_gen.py "text" "output_file"
             // Start process
-            const { exec } = require('child_process');
-            const safeAnswer = answer.replace(/"/g, '\\"');
+            // USE PYTHON3 with spawn for safety
+            const { spawn } = require('child_process');
 
-            // USE PYTHON3 for Docker/Linux compatibility
-            exec(`python3 "${pythonScriptPath}" "${safeAnswer}" "${audioPath}"`, async (error, stdout, stderr) => {
-                if (error) {
-                    console.error('❌ TTS EXEC ERROR:', error);
-                    console.error('❌ TTS STDERR:', stderr);
-                    console.error('❌ TTS STDOUT:', stdout);
+            const child = spawn('python3', [pythonScriptPath, answer, audioPath]);
+
+            child.stdout.on('data', (data) => console.log(`TTS STDOUT: ${data}`));
+            child.stderr.on('data', (data) => console.error(`TTS STDERR: ${data}`));
+
+            child.on('close', (code) => {
+                if (code !== 0) {
                     return message.channel.send("❌ **Weedify:** Voice box broke, check console logs.");
                 }
 
