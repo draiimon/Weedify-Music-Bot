@@ -50,28 +50,28 @@ client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
 const nodes = [
-    // 1. AjieBlogs v4 (SSL - Port 443) - From BotXLab List
+    // 1. AjieBlogs v4 (SSL - Port 443) - WORKING (Primary)
     {
         host: "lava-v4.ajieblogs.eu.org",
         password: "https://dsc.gg/ajidevserver",
         port: 443,
         secure: true
     },
-    // 2. DivaHost (Non-SSL - Port 60002)
+    // 2. DivaHost (Non-SSL - Port 60002) - Backup 1
     {
         host: "lavalink.divahost.net",
         password: "divahostv4",
         port: 60002,
         secure: false
     },
-    // 3. Musik Hosting (SSL - Port 443)
+    // 3. Voltex (SSL - Port 443) - Backup 2
     {
-        host: "lavalink-v2.pericsq.ro",
-        password: "wwweasycodero",
+        host: "lava.voltex.rocks",
+        password: "youshallnotpass",
         port: 443,
         secure: true
     },
-    // 4. Sanode US (Non-SSL - Port 25568)
+    // 4. Sanode US (Non-SSL - Port 25568) - Backup 3
     {
         host: "us.sanode.xyz",
         password: "discord.gg/W2GheK3F9m",
