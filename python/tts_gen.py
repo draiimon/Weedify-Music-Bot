@@ -4,9 +4,10 @@ import edge_tts
 
 async def generate_tts(text, output_file):
     # Voice: fil-PH-AngeloNeural (Male, Filipino) - Perfect for "Young Stunna"
+    # Rate +10% and Volume +30% to match gnslgbot2 quality
     voice = "fil-PH-AngeloNeural"
     
-    communicate = edge_tts.Communicate(text, voice)
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate="+10%", volume="+30%")
     await communicate.save(output_file)
 
 if __name__ == "__main__":
