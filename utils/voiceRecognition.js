@@ -1,76 +1,87 @@
-const { joinVoiceChannel, EndBehaviorType, createAudioPlayer, createAudioResource, StreamType, AudioPlayerStatus } = require('@discordjs/voice');
-const { OpusEncoder } = require('@discordjs/opus');
-const Groq = require('groq-sdk');
-const fs = require('fs');
+const { joinVoiceChannel, EndBehaviorType, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require('@discordjs/voice');
+const prism = require('prism-media');
+const { createWriteStream, unlinkSync, existsSync, mkdirSync } = require('fs');
+const { Readable } = require('stream');
 const path = require('path');
-const { exec } = require('child_process');
+const Groq = require('groq-sdk');
 
 class VoiceRecognition {
     constructor(client) {
         this.client = client;
-        this.activeListeners = new Map(); // guildId -> voice connection
-        this.groqClient = null;
-        this.speechMethod = process.env.SPEECH_METHOD || 'groq';
+        this.activeListeners = new Map(); // guildId => { connection, isProcessing, audioData }
+        this.groq = null;
 
-        // Initialize Groq client if API key is available
         if (process.env.GROQ_API_KEY) {
-            this.groqClient = new Groq({
+            this.groq = new Groq({
                 apiKey: process.env.GROQ_API_KEY
             });
-            console.log('✅ Groq Whisper API initialized');
+            console.log('✅ Groq client initialized for voice recognition');
         } else {
             console.warn('⚠️ GROQ_API_KEY not found. Voice recognition will not work.');
         }
 
-        this.language = process.env.VOICE_LANGUAGE || 'en';
-        this.tempDir = path.join(__dirname, '..', 'temp_audio');
-
-        // Create temp directory if it doesn't exist
-        if (!fs.existsSync(this.tempDir)) {
-            fs.mkdirSync(this.tempDir, { recursive: true });
+        // Ensure temp directory exists
+        if (!existsSync('./temp_audio')) {
+            mkdirSync('./temp_audio', { recursive: true });
         }
     }
 
     async startListening(guild, voiceChannel, textChannel) {
         try {
-            const guildId = guild.id;
-
-            // Check if already listening
-            if (this.activeListeners.has(guildId)) {
-                return { success: false, message: 'Already listening in this server!' };
+            if (!this.groq) {
+                return { success: false, message: '❌ Groq API not configured' };
             }
 
-            // Join voice channel - MUST BE UNMUTED TO SPEAK
-            const voiceConnection = joinVoiceChannel({
+            const guildId = guild.id;
+
+            // Join voice channel
+            const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: guildId,
                 adapterCreator: guild.voiceAdapterCreator,
-                selfDeaf: false,
-                selfMute: false, // Changed to FALSE so bot can speak!
+                selfDeaf: false, // CRITICAL: Must be false to receive audio
+                selfMute: false
             });
 
-            // Store connection info
-            this.activeListeners.set(guildId, {
-                voiceConnection,
-                textChannel,
-                voiceChannel
-            });
+            console.log(`🔊 Joined voice channel: ${voiceChannel.name}`);
 
-            // Start listening for speech
-            this.setupSpeechRecognition(guildId, voiceConnection, textChannel);
-
-            // DOUBLE CHECK: Force undeafen via Discord.js to be 100% sure
+            // Force undeafen after 2 seconds
             const discordGuild = this.client.guilds.cache.get(guildId);
             if (discordGuild && discordGuild.members.me && discordGuild.members.me.voice) {
                 setTimeout(() => {
                     try {
                         discordGuild.members.me.voice.setDeaf(false).catch(err => console.error(`Failed to force undeafen (Voice): ${err.message}`));
+                        console.log(`🔓 Force undeafened in ${voiceChannel.name}`);
                     } catch (e) { console.error('Force undeafen error (Voice):', e); }
                 }, 2000);
             }
 
+            // Set up receiver
+            const receiver = connection.receiver;
+
+            // Listen to speaking events
+            receiver.speaking.on('start', async (userId) => {
+                const user = this.client.users.cache.get(userId);
+                if (!user || user.bot) return;
+
+                console.log(`🎤 ${user.username} started speaking`);
+
+                // Create audio stream
+                const audioStream = receiver.subscribe(userId, {
+                    end: {
+                        behavior: EndBehaviorType.AfterSilence,
+                        duration: 1000 // 1 second of silence to end
+                    }
+                });
+
+                // Process the audio
+                await this.processAudioStream(audioStream, guildId, userId, textChannel);
+            });
+
+            this.activeListeners.set(guildId, { connection, textChannel });
+
             console.log(`🎤 Started listening in ${guild.name} (${voiceChannel.name})`);
-            return { success: true, message: `Now listening for voice requests in ${voiceChannel.name}!\nSay "play [song name]" to request music.` };
+            return { success: true, message: `Now listening for voice requests in ${voiceChannel.name}!\\nSay \"play [song name]\" to request music.` };
 
         } catch (error) {
             console.error('Error starting voice listener:', error);
@@ -78,335 +89,239 @@ class VoiceRecognition {
         }
     }
 
-    setupSpeechRecognition(guildId, voiceConnection, textChannel) {
-        const receiver = voiceConnection.receiver;
+    async processAudioStream(opusStream, guildId, userId, textChannel) {
+        try {
+            const listener = this.activeListeners.get(guildId);
+            if (!listener) return;
 
-        receiver.speaking.on('start', async (userId) => {
-            try {
-                const user = this.client.users.cache.get(userId);
-                if (!user || user.bot) return; // Ignore bots
+            // Prevent overlapping processing
+            if (listener.isProcessing) {
+                console.log('⏭️ Skipping overlapping audio processing');
+                return;
+            }
 
-                console.log(`🎤 ${user.username} started speaking`);
+            listener.isProcessing = true;
 
-                const audioStream = receiver.subscribe(userId, {
-                    end: {
-                        behavior: EndBehaviorType.AfterSilence,
-                        duration: 1000, // 1 second of silence
-                    },
-                });
+            // Convert Opus to PCM
+            const decoder = new prism.opus.Decoder({
+                frameSize: 960,
+                channels: 2,
+                rate: 48000
+            });
 
-                const encoder = new OpusEncoder(48000, 2);
-                let buffer = [];
+            // Collect PCM data
+            const audioChunks = [];
 
-                audioStream.on('data', chunk => {
+            opusStream
+                .pipe(decoder)
+                .on('data', (chunk) => {
+                    audioChunks.push(chunk);
+                })
+                .on('end', async () => {
                     try {
-                        buffer.push(encoder.decode(chunk));
-                    } catch (err) {
-                        console.error('Audio decode error:', err.message);
-                    }
-                });
-
-                audioStream.once('end', async () => {
-                    try {
-                        buffer = Buffer.concat(buffer);
-                        const duration = buffer.length / 48000 / 4;
-
-                        console.log(`Audio duration: ${duration.toFixed(2)}s`);
-
-                        // Skip too short or too long clips
-                        if (duration < 1.0 || duration > 19) {
-                            console.log('Audio too short/long, skipping');
+                        if (audioChunks.length === 0) {
+                            console.log('⏭️ No audio data captured');
+                            listener.isProcessing = false;
                             return;
                         }
 
-                        // Transcribe the audio
-                        const transcription = await this.transcribe(buffer, guildId);
+                        // Combine all chunks
+                        const audioBuffer = Buffer.concat(audioChunks);
 
-                        if (transcription && transcription.trim().length > 0) {
-                            console.log(`Transcribed: "${transcription}"`);
+                        // Save to WAV file
+                        const timestamp = Date.now();
+                        const wavPath = path.join('./temp_audio', `recording_${guildId}_${timestamp}.wav`);
 
-                            // Send transcription to text channel
-                            await textChannel.send(`🎤 **${user.username}**: ${transcription}`);
+                        // Write WAV file
+                        await this.saveAsWav(audioBuffer, wavPath);
 
-                            // Process as song request
-                            await this.processSongRequest(transcription, guildId, textChannel, user);
-                        }
+                        console.log(`💾 Saved audio: ${wavPath} (${audioBuffer.length} bytes)`);
+
+                        // Transcribe with Groq
+                        await this.transcribeAndProcess(wavPath, guildId, userId, textChannel);
+
                     } catch (error) {
-                        console.error('Error processing audio:', error.message);
+                        console.error('Error processing audio end:', error);
+                    } finally {
+                        listener.isProcessing = false;
                     }
+                })
+                .on('error', (error) => {
+                    console.error('Error in audio stream:', error);
+                    listener.isProcessing = false;
                 });
 
-            } catch (error) {
-                console.error('Error in speaking handler:', error.message);
-            }
+        } catch (error) {
+            console.error('Error in processAudioStream:', error);
+            const listener = this.activeListeners.get(guildId);
+            if (listener) listener.isProcessing = false;
+        }
+    }
+
+    async saveAsWav(pcmBuffer, outputPath) {
+        const fs = require('fs');
+        const wav = require('wav');
+
+        const writer = new wav.Writer({
+            channels: 2,
+            sampleRate: 48000,
+            bitDepth: 16
+        });
+
+        writer.pipe(fs.createWriteStream(outputPath));
+        writer.write(pcmBuffer);
+        writer.end();
+
+        return new Promise((resolve, reject) => {
+            writer.on('finish', resolve);
+            writer.on('error', reject);
         });
     }
 
-    async transcribe(buffer, guildId) {
+    async transcribeAndProcess(audioPath, guildId, userId, textChannel) {
         try {
-            if (this.speechMethod === 'groq' && this.groqClient) {
-                return await this.transcribeGroq(buffer);
-            } else {
-                console.error('No transcription method available');
-                return null;
+            if (!this.groq) {
+                console.error('❌ Groq client not initialized');
+                return;
             }
-        } catch (error) {
-            console.error('Transcription error:', error.message);
-            return null;
-        }
-    }
 
-    async transcribeGroq(buffer) {
-        try {
-            // Save buffer as temporary audio file
-            const tempFilePath = path.join(this.tempDir, `audio_${Date.now()}.raw`);
-            fs.writeFileSync(tempFilePath, buffer);
+            console.log(`🎤 Transcribing audio for guild ${guildId}...`);
 
-            console.log('Sending to Groq Whisper API...');
+            const fs = require('fs');
+            const fileBuffer = fs.readFileSync(audioPath);
 
-            // Create a readable stream from the file
-            const fileStream = fs.createReadStream(tempFilePath);
-
-            // Send to Groq Whisper API
-            const transcription = await this.groqClient.audio.transcriptions.create({
-                file: fileStream,
+            const transcription = await this.groq.audio.transcriptions.create({
+                file: fileBuffer,
                 model: 'whisper-large-v3',
-                language: this.language,
-                response_format: 'text',
+                response_format: 'json',
                 temperature: 0
             });
 
-            // Clean up temp file
-            fs.unlinkSync(tempFilePath);
+            const text = transcription.text?.trim();
+            console.log(`📝 Transcription: "${text}"`);
 
-            return transcription || '';
+            // Clean up audio file
+            if (existsSync(audioPath)) {
+                unlinkSync(audioPath);
+            }
+
+            if (!text || text.length < 2) {
+                console.log('⏭️ Transcription too short, ignoring');
+                return;
+            }
+
+            // Process the command
+            await this.handleVoiceCommand(text, guildId, userId, textChannel);
 
         } catch (error) {
-            console.error('Groq transcription error:', error.message);
-            return null;
+            console.error('❌ Transcription error:', error);
+            // Clean up on error
+            if (existsSync(audioPath)) {
+                unlinkSync(audioPath);
+            }
         }
     }
 
-    async processSongRequest(text, guildId, textChannel, user) {
-        try {
-            // Check for song request keywords
-            const lowerText = text.toLowerCase();
-            let songQuery = null;
+    async handleVoiceCommand(text, guildId, userId, textChannel) {
+        const lowerText = text.toLowerCase();
 
-            // STRICT ACTIVATION: Must start with "play", "tugtugin", or "pakinggan"
-            if (lowerText.startsWith('play ')) {
-                songQuery = text.substring(5).trim();
-            }
-            else if (lowerText.startsWith('tugtugin ') || lowerText.startsWith('tugtog ')) {
-                songQuery = text.substring(text.indexOf(' ') + 1).trim();
-            }
-            else if (lowerText.startsWith('pakinggan ')) {
-                songQuery = text.replace(/pakinggan/i, '').trim();
-            }
+        // Check for "play" command
+        if (lowerText.includes('play') || lowerText.includes('tugtugin') || lowerText.includes('patugtog')) {
+            // Extract song name
+            let songName = text
+                .replace(/play/gi, '')
+                .replace(/tugtugin/gi, '')
+                .replace(/patugtog/gi, '')
+                .trim();
 
-            if (songQuery && songQuery.length > 0) {
-                console.log(`🎵 Song request detected: "${songQuery}"`);
+            if (songName.length > 0) {
+                console.log(`🎵 Voice request: ${songName}`);
 
-                // Get the player
-                const player = this.client.riffy.players.get(guildId);
+                // Get the play command
+                const playCommand = this.client.messageCommands?.get('play');
+                if (playCommand) {
+                    // Create a pseudo-message object
+                    const guild = this.client.guilds.cache.get(guildId);
+                    const member = guild.members.cache.get(userId);
+                    const voiceChannel = member?.voice?.channel;
 
-                if (player && this.client.playerHandler) {
-                    // Use existing player handler to play the song
-                    const result = await this.client.playerHandler.playSong(player, songQuery, user);
-
-                    if (result.type === 'track') {
-                        await textChannel.send(`✅ **Weedify:** Ayt bet, queuing up **${result.track.info.title}** for ya!`);
-                    } else if (result.type === 'playlist') {
-                        await textChannel.send(`✅ **Weedify:** Playlist secured! Loaded **${result.name}** with ${result.tracks} tracks.`);
-                    } else {
-                        await textChannel.send(`❌ **Weedify:** Yo fam, couldn't find anything for "${songQuery}". Try again?`);
-                    }
-                } else {
-                    await textChannel.send(`❌ **Weedify:** I ain't in a voice channel yet. Hit me with that \`w!join\` first!`);
-                }
-            } else {
-                // --- EXPANDED VOICE COMMANDS ---
-                const commandText = lowerText.trim();
-                const player = this.client.riffy.players.get(guildId);
-
-                if (player) {
-                    // SKIP
-                    if (['skip', 'next', 'lipat'].some(cmd => commandText.includes(cmd))) {
-                        player.stop();
-                        return textChannel.send(`⏭️ **Weedify:** Skipped that track!`);
-                    }
-                    // SHUFFLE
-                    if (['shuffle', 'mix', 'halo'].some(cmd => commandText.includes(cmd))) {
-                        player.queue.shuffle();
-                        return textChannel.send(`🔀 **Weedify:** Shuffled the playlist, let's mix it up!`);
-                    }
-                    // PAUSE
-                    if (['pause', 'time out', 'hinto muna'].some(cmd => commandText.includes(cmd))) {
-                        player.pause(true);
-                        return textChannel.send(`⏸️ **Weedify:** Paused. Holler when you ready.`);
-                    }
-                    // RESUME
-                    if (['resume', 'tuloy', 'continue'].some(cmd => commandText.includes(cmd))) {
-                        player.pause(false);
-                        return textChannel.send(`▶️ **Weedify:** We back in action!`);
-                    }
-                    // STOP / LEAVE
-                    if (['stop music', 'hinto', 'stop playing'].some(cmd => commandText === cmd)) { // Strict match for stop
-                        player.destroy();
-                        return textChannel.send(`Tk **Weedify:** Aight, I'm out. Peace!`);
-                    }
-                    // LOOP
-                    if (['loop', 'repeat', 'ulit'].some(cmd => commandText.includes(cmd))) {
-                        const currentLoop = player.loop;
-                        // Toggle loop (Track -> Queue -> Off) - Simplified to Track/Off for voice
-                        if (currentLoop === 'none') {
-                            player.setLoop('track');
-                            return textChannel.send(`Tk **Weedify:** Looping this track!`);
-                        } else {
-                            player.setLoop('none');
-                            return textChannel.send(`Tk **Weedify:** Loop off.`);
+                    if (voiceChannel) {
+                        try {
+                            await playCommand.execute({
+                                guild,
+                                member,
+                                channel: textChannel,
+                                reply: (msg) => textChannel.send(msg)
+                            }, [songName], this.client);
+                        } catch (error) {
+                            console.error('Error executing play command:', error);
                         }
                     }
                 }
-
-                // If it's NOT a song request OR a command, generate an AI response
-                console.log(`💬 Conversational input detected: "${text}"`);
-                await this.generateAIResponse(text, textChannel, user, guildId);
             }
-
-        } catch (error) {
-            console.error('Error processing request:', error.message);
-            await textChannel.send(`❌ Error processing request: ${error.message}`);
         }
     }
 
-    async generateAIResponse(text, textChannel, user, guildId) {
-        if (!this.groqClient) return;
-
-        try {
-            const prompt = `
-            You are "Weedify", a cool, laid-back, and hype AI assistant for a music bot. 
-            Language: TAGALOG / TAGLISH (Strict).
-            Your vibe is energetic, use Filipino slang (par, tol, omsim). (Young Stunna Attitude).
-            
-            Current User: ${user.username}
-            User Input: "${text}"
-            Developer: Mark Andrei Castillo.
-            
-            Respond in Tagalog/Taglish. Keep it short (under 2 sentences). 
-            Do NOT act like a robot. Be a homie.
-            If they ask how to play music, tell them: "Sabihin mo lang 'Play [song name]' par."
-            `;
-
-            const completion = await this.groqClient.chat.completions.create({
-                messages: [
-                    { role: "system", content: "You are Weedify, a Tagalog speaking music bot assistant." },
-                    { role: "user", content: prompt }
-                ],
-                model: "openai/gpt-oss-120b", // User requested specific model
-                temperature: 0.7,
-                max_tokens: 150,
-            });
-
-            const aiResponse = completion.choices[0]?.message?.content || "Yo, I didn't catch that.";
-
-            // Send Text
-            await textChannel.send(`🗣️ **Weedify:** ${aiResponse}`);
-
-            // SPEAK RESPONSE (TTS)
-            if (guildId) {
-                await this.speakResponse(aiResponse, guildId);
-            }
-
-        } catch (error) {
-            console.error('Error generating AI response:', error);
-        }
-    }
-
-    async speakResponse(text, guildId) {
+    async speak(guildId, text) {
         try {
             const listener = this.activeListeners.get(guildId);
-            if (!listener || !listener.voiceConnection) return;
+            if (!listener) {
+                console.warn('⚠️ No active voice connection for TTS');
+                return;
+            }
 
-            const connection = listener.voiceConnection;
-            const audioPath = path.join(this.tempDir, `voice_reply_${Date.now()}.mp3`);
-            const pythonScriptPath = path.join(__dirname, '..', 'python', 'tts_gen.py');
-            const safeText = text.replace(/"/g, '\\"');
+            const { connection } = listener;
 
-            // 1. Generate Audio file using spawn (Safer than exec)
+            // Generate TTS
+            const audioPath = path.join('./temp_audio', `tts_${Date.now()}.mp3`);
+            const pythonScript = path.join(__dirname, '..', 'python', 'tts_gen.py');
+
             const { spawn } = require('child_process');
 
             await new Promise((resolve, reject) => {
-                const child = spawn('python3', [pythonScriptPath, text, audioPath]);
-
-                let stderrData = '';
-
-                child.stderr.on('data', (data) => {
-                    stderrData += data.toString();
-                });
+                const child = spawn('python3', [pythonScript, text, audioPath]);
 
                 child.on('close', (code) => {
                     if (code !== 0) {
-                        console.error(`TTS Process exited with code ${code}`);
-                        console.error(`TTS Stderr: ${stderrData}`);
                         reject(new Error(`TTS failed with code ${code}`));
                     } else {
                         resolve();
                     }
                 });
 
-                child.on('error', (err) => {
-                    console.error('Failed to start TTS process:', err);
-                    reject(err);
-                });
+                child.on('error', reject);
             });
 
-            // 2. Play Audio via Discord Voice
+            // Play audio
             const player = createAudioPlayer();
             const resource = createAudioResource(audioPath, { inputType: StreamType.Arbitrary });
 
-            // Subscribe logic
-            const subscription = connection.subscribe(player);
+            connection.subscribe(player);
+            player.play(resource);
 
-            if (subscription) {
-                player.play(resource);
-                console.log(`🗣️ Speaking: "${text}"`);
-            }
+            console.log(`🗣️ Speaking: "${text}"`);
 
-            // Cleanup
             player.on(AudioPlayerStatus.Idle, () => {
-                if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
-            });
-
-            player.on('error', err => {
-                console.error('Audio Player Error:', err);
-                if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+                if (existsSync(audioPath)) {
+                    unlinkSync(audioPath);
+                }
             });
 
         } catch (error) {
-            console.error('Speak Response Error:', error);
+            console.error('TTS Error:', error);
         }
     }
 
     stopListening(guildId) {
-        try {
-            const listener = this.activeListeners.get(guildId);
-
-            if (!listener) {
-                return { success: false, message: 'Not listening in this server!' };
-            }
-
-            // Destroy voice connection
-            listener.voiceConnection.destroy();
-            this.activeListeners.delete(guildId);
-
-            console.log(`🎤 Stopped listening in guild ${guildId}`);
-            return { success: true, message: 'Stopped listening for voice requests.' };
-
-        } catch (error) {
-            console.error('Error stopping voice listener:', error);
-            return { success: false, message: 'Failed to stop listening: ' + error.message };
+        const listener = this.activeListeners.get(guildId);
+        if (!listener) {
+            return { success: false, message: '❌ Not currently listening in this server' };
         }
+
+        listener.connection.destroy();
+        this.activeListeners.delete(guildId);
+
+        return { success: true, message: '🔇 Stopped listening for voice commands' };
     }
 
     isListening(guildId) {
@@ -414,16 +329,7 @@ class VoiceRecognition {
     }
 
     getStatus(guildId) {
-        const listener = this.activeListeners.get(guildId);
-        if (listener) {
-            return {
-                listening: true,
-                channel: listener.voiceChannel.name,
-                method: this.speechMethod,
-                language: this.language
-            };
-        }
-        return { listening: false };
+        return this.isListening(guildId) ? '🎤 Listening' : '🔇 Not listening';
     }
 }
 
