@@ -273,6 +273,21 @@ function setupErrorHandlers(client) {
     client.on('warn', (warning) => {
         console.warn('⚠️ Discord Client Warning:', warning);
     });
+
+    client.on('debug', (info) => {
+        // Log connection info but filter out noise
+        if (info.includes('Heartbeat') || info.includes('Session')) {
+            console.log('🐞 Debug:', info);
+        }
+    });
+
+    client.on('shardReady', (id) => {
+        console.log(`⚡ Shard ${id} is ready!`);
+    });
+
+    client.on('shardError', (error) => {
+        console.error('❌ Shard Error:', error);
+    });
 }
 
 // Start the bot

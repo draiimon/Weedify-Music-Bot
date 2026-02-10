@@ -30,6 +30,8 @@ module.exports = {
      * @param {Client} client - Discord client runtime instance
      */
     async execute(client) {
+        console.log(">>>>>>>>>>>>>> READY EVENT FIRED <<<<<<<<<<<<<<");
+        console.log(`Logged in as ${client.user.tag}!`);
         const clientInitializationManager = new ClientInitializationManager(client);
         await clientInitializationManager.executeComprehensiveStartupSequence();
     }
