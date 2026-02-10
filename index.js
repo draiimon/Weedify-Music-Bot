@@ -40,12 +40,29 @@ client.slashCommands = new Collection();
 client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
-const nodes = [{
-    host: config.lavalink.host,
-    password: config.lavalink.password,
-    port: config.lavalink.port,
-    secure: config.lavalink.secure
-}];
+const nodes = [
+    // Node 1: Karing Tech (Stable)
+    {
+        host: "lavalink.karing.tech",
+        password: "youshallnotpass",
+        port: 443,
+        secure: true
+    },
+    // Node 2: Lava.link (Backup)
+    {
+        host: "v3.lavalink.ksii.moe",
+        password: "youshallnotpass",
+        port: 443,
+        secure: true
+    },
+    // Node 3: User's Original (Low Priority)
+    {
+        host: config.lavalink.host,
+        password: config.lavalink.password,
+        port: config.lavalink.port,
+        secure: config.lavalink.secure
+    }
+];
 
 console.log(`🎵 Configuring Lavalink Node: ${nodes[0].host}`);
 
