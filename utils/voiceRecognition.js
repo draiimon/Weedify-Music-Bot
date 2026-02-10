@@ -242,6 +242,9 @@ class VoiceRecognition {
             if (songName.length > 0) {
                 console.log(`🎵 Voice request: ${songName}`);
 
+                // Speak confirmation
+                await this.speak(guildId, `Sige, tugtugin ko ang ${songName}`);
+
                 // Get the play command
                 const playCommand = this.client.messageCommands?.get('play');
                 if (playCommand) {
@@ -260,6 +263,7 @@ class VoiceRecognition {
                             }, [songName], this.client);
                         } catch (error) {
                             console.error('Error executing play command:', error);
+                            await this.speak(guildId, `Sorry, di ko mahanap yung ${songName}`);
                         }
                     }
                 }
