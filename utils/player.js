@@ -11,7 +11,7 @@ class PlayerHandler {
     async createPlayer(guildId, voiceChannelId, textChannelId, options = {}) {
         try {
             let player = this.client.riffy.players.get(guildId);
-            
+
             if (player) {
                 if (player.voiceChannel === voiceChannelId) {
                     return player;
@@ -25,7 +25,7 @@ class PlayerHandler {
                 guildId: guildId,
                 voiceChannel: voiceChannelId,
                 textChannel: textChannelId,
-                deaf: true,
+                deaf: false, // CHANGED TO FALSE SO BOT CAN HEAR COMMANDS
                 ...options
             });
 
@@ -40,9 +40,9 @@ class PlayerHandler {
         try {
             if (!player) return { type: 'error', message: 'Player not available' };
 
-            const resolve = await this.client.riffy.resolve({ 
-                query: query, 
-                requester: requester 
+            const resolve = await this.client.riffy.resolve({
+                query: query,
+                requester: requester
             });
 
             const { loadType, tracks, playlistInfo } = resolve;
@@ -96,7 +96,7 @@ class PlayerHandler {
 
     async getThumbnailSafely(track) {
         try {
-        
+
             if (track.info.thumbnail instanceof Promise) {
                 const thumbnail = await Promise.race([
                     track.info.thumbnail,
@@ -104,20 +104,20 @@ class PlayerHandler {
                 ]);
                 return typeof thumbnail === 'string' ? thumbnail : null;
             }
-            
-      
+
+
             if (typeof track.info.thumbnail === 'string' && track.info.thumbnail.trim() !== '') {
                 return track.info.thumbnail;
             }
-            
-      
+
+
             if (track.info.identifier && track.info.sourceName === 'youtube') {
                 return `https://img.youtube.com/vi/${track.info.identifier}/maxresdefault.jpg`;
             }
-            
+
             return null;
         } catch (error) {
-          
+
             if (track.info.identifier && track.info.sourceName === 'youtube') {
                 return `https://img.youtube.com/vi/${track.info.identifier}/maxresdefault.jpg`;
             }
@@ -128,12 +128,12 @@ class PlayerHandler {
     async getPlayerInfo(guildId) {
         try {
             const player = this.client.riffy.players.get(guildId);
-            
+
             if (!player || !player.current || !player.current.info) {
                 return null;
             }
 
-      
+
             const thumbnail = await this.getThumbnailSafely(player.current);
 
             return {
@@ -160,16 +160,16 @@ class PlayerHandler {
             try {
                 const trackTitle = track?.info?.title || 'Unknown Track';
                 console.log(`🎵 Started playing: ${trackTitle} in ${player.guildId}`);
-                
+
                 this.idleTracker.clearIdleTimer(player.guildId);
-                
+
                 if (this.client.statusManager) {
                     await this.client.statusManager.onTrackStart(player.guildId);
                 }
-                
+
                 if (track && track.info) {
                     const thumbnail = await this.getThumbnailSafely(track);
-                    
+
                     await this.centralEmbed.updateCentralEmbed(player.guildId, {
                         title: track.info.title || 'Unknown Title',
                         author: track.info.author || 'Unknown Artist',
@@ -191,33 +191,33 @@ class PlayerHandler {
             try {
                 const trackTitle = track?.info?.title || 'Unknown Track';
                 console.log(`🎵 Finished playing: ${trackTitle} in ${player.guildId}`);
-                
+
                 if (player.queue.size === 0) {
                     this.idleTracker.startIdleTimer(player.guildId);
                 }
-                
+
                 if (this.client.statusManager) {
                     await this.client.statusManager.onTrackEnd(player.guildId);
                 }
-                
+
                 if (track && track.info && player.textChannel) {
                     try {
                         const channel = await this.client.channels.fetch(player.textChannel);
                         if (channel && channel.isTextBased()) {
                             const { EmbedBuilder } = require('discord.js');
                             const finishedThumbnail = await this.getThumbnailSafely(track);
-                            
+
                             const finishedEmbed = new EmbedBuilder()
                                 .setColor(0x808080)
                                 .setTitle('✅ Tapos na / Song Finished')
                                 .setDescription(`**${track.info.title}**\nby ${track.info.author || 'Unknown Artist'}`)
                                 .setFooter({ text: `Requested by ${track.info.requester?.username || 'Unknown'}` })
                                 .setTimestamp();
-                            
+
                             if (finishedThumbnail) {
                                 finishedEmbed.setThumbnail(finishedThumbnail);
                             }
-                            
+
                             await channel.send({ embeds: [finishedEmbed] });
                             console.log(`📢 Announced finished song: ${track.info.title}`);
                         }
@@ -225,7 +225,7 @@ class PlayerHandler {
                         console.error('Failed to send finished song announcement:', channelError.message);
                     }
                 }
-                
+
                 const nextTrack = player.queue[0];
                 if (nextTrack && nextTrack.info && player.textChannel) {
                     try {
@@ -233,18 +233,18 @@ class PlayerHandler {
                         if (channel && channel.isTextBased()) {
                             const { EmbedBuilder } = require('discord.js');
                             const thumbnail = await this.getThumbnailSafely(nextTrack);
-                            
+
                             const embed = new EmbedBuilder()
                                 .setColor(0x00FF00)
                                 .setTitle('🎵 Susunod na Kanta / Next Up')
                                 .setDescription(`**${nextTrack.info.title}**\nby ${nextTrack.info.author || 'Unknown Artist'}`)
                                 .setFooter({ text: `Requested by ${nextTrack.info.requester?.username || 'Unknown'}` })
                                 .setTimestamp();
-                            
+
                             if (thumbnail) {
                                 embed.setThumbnail(thumbnail);
                             }
-                            
+
                             await channel.send({ embeds: [embed] });
                             console.log(`📢 Announced next song: ${nextTrack.info.title}`);
                         }
@@ -260,15 +260,15 @@ class PlayerHandler {
         this.client.riffy.on('queueEnd', async (player) => {
             try {
                 console.log(`🎵 Queue ended in ${player.guildId}`);
-        
+
                 await this.centralEmbed.updateCentralEmbed(player.guildId, null);
-        
+
                 const serverConfig = await require('../models/Server').findById(player.guildId);
-        
+
                 if (serverConfig?.settings?.autoplay) {
                     player.isAutoplay = true;
                 }
-        
+
                 if (player.isAutoplay) {
                     player.autoplay(player);
                 } else {
@@ -277,14 +277,14 @@ class PlayerHandler {
                             const channel = await this.client.channels.fetch(player.textChannel);
                             if (channel && channel.isTextBased()) {
                                 const { EmbedBuilder } = require('discord.js');
-                                
+
                                 const embed = new EmbedBuilder()
                                     .setColor(0xFF6B6B)
                                     .setTitle('⏹️ Walang Tumutugtog / No Music Playing')
                                     .setDescription('Ang queue ay ubos na. Umalis na ako sa voice channel para makatipid sa resources!')
                                     .setFooter({ text: 'I-play ulit gamit ang w!play o /play' })
                                     .setTimestamp();
-                                
+
                                 await channel.send({ embeds: [embed] });
                                 console.log(`📢 Announced queue end in ${player.guildId}`);
                             }
@@ -292,11 +292,11 @@ class PlayerHandler {
                             console.error('Failed to send queue end announcement:', channelError.message);
                         }
                     }
-                    
+
                     if (this.client.statusManager) {
                         await this.client.statusManager.onPlayerDisconnect(player.guildId);
                     }
-                    
+
                     setTimeout(async () => {
                         try {
                             if (player && !player.playing && player.queue.size === 0) {
@@ -331,13 +331,13 @@ class PlayerHandler {
         this.client.riffy.on('playerDisconnect', async (player) => {
             try {
                 console.log(`🎵 Player destroyed for guild ${player.guildId}`);
-                
+
                 this.idleTracker.clearIdleTimer(player.guildId);
-                
+
                 if (this.client.statusManager) {
                     await this.client.statusManager.onPlayerDisconnect(player.guildId);
                 }
-                
+
                 await this.centralEmbed.updateCentralEmbed(player.guildId, null);
             } catch (error) {
                 console.error('Player disconnect error:', error.message);
