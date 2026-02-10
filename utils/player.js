@@ -25,9 +25,19 @@ class PlayerHandler {
                 guildId: guildId,
                 voiceChannel: voiceChannelId,
                 textChannel: textChannelId,
-                deaf: false, // CHANGED TO FALSE SO BOT CAN HEAR COMMANDS
+                deaf: false,
                 ...options
             });
+
+            // DOUBLE CHECK: Force undeafen via Discord.js to be 100% sure
+            const guild = this.client.guilds.cache.get(guildId);
+            if (guild && guild.members.me && guild.members.me.voice) {
+                setTimeout(() => {
+                    try {
+                        guild.members.me.voice.setDeaf(false).catch(err => console.error(`Failed to force undeafen: ${err.message}`));
+                    } catch (e) { console.error('Force undeafen error:', e); }
+                }, 2000); // 2-second delay to let connection establish
+            }
 
             return player;
         } catch (error) {
