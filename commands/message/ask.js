@@ -51,7 +51,7 @@ module.exports = {
             - Bot Name: Weedify Music Bot
             - Prefix: w!
             - Commands: w!play, w!skip, w!stop, w!ask, w!listen, w!lstop
-            - Developer: The user "Aloof" (Andrei).
+            - Developer: Mark Andrei Castillo.
             
             Task: Answer the user's question accurately but in your persona (Tagalog/Taglish).
             Keep it concise (under 3 sentences) for voice playback.

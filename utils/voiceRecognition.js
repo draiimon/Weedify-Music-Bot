@@ -280,6 +280,7 @@ class VoiceRecognition {
             
             Current User: ${user.username}
             User Input: "${text}"
+            Developer: Mark Andrei Castillo.
             
             Respond in Tagalog/Taglish. Keep it short (under 2 sentences). 
             Do NOT act like a robot. Be a homie.
