@@ -29,6 +29,12 @@ Isang powerful Discord music bot na may Tagalog commands at maangas na responses
 - `w!shuffle` - Ihalo yung pila (aliases: mix, sh, halo)
 - `w!join` - Pasali ako sa VC! (aliases: halika, tara)
 
+### 🎤 Voice Commands (NEW!)
+- `w!listen` - Makikinig na ako sa boses mo! (aliases: makinig, dinig)
+- `w!unlisten` - Tigil muna pakikinig. (aliases: stoplisten)
+- **Voice Usage**: Say **"play [song]"** or **"tugtugin [song]"** habang nakikinig ang bot!
+
+
 ### Info Commands
 - `w!ping` - Check kung mabilis ba ako!
 - `w!help` - Listahan ng commands (aliases: h, tulong, commands)
@@ -61,6 +67,45 @@ TOKEN=your_discord_bot_token_here
 MONGODB_URI=your_mongodb_uri_here
 BOT_PREFIX=w!
 ```
+
+## Keep Bot Always Online (Free Method)
+
+The bot now includes a built-in HTTP server with health check endpoints!
+
+### 1. Built-in Self-Ping
+The bot automatically pings itself every 14 minutes to prevent Render from sleeping.
+- **Requirement**: Set `RENDER_EXTERNAL_URL` in your environment variables to your app's URL.
+
+### 2. External Health Checks (CRITICAL)
+Use a service like **UptimeRobot** or **Cron-Job.org** to ping your bot every 14 minutes:
+1. Get your Render service URL (e.g., `https://weedify-bot.onrender.com`)
+2. Set up a monitor to ping `https://weedify-bot.onrender.com/ping` every 14 minutes
+3. This keeps your bot active on the free tier
+
+**Health Check Endpoints:**
+- `/` - Main page showing bot status
+- `/health` - Detailed health information
+- `/ping` - Simple ping endpoint for monitors
+- `/ready` - Render readiness check
+
+## 🎤 NEW: Voice Recognition Setup
+Weedify now supports **Voice-to-Text Song Requests** using Groq Whisper!
+
+### Configuration
+Add these environment variables:
+- `GROQ_API_KEY` - Your Groq API key
+- `SPEECH_METHOD` - Set to `groq`
+- `VOICE_LANGUAGE` - e.g., `en` or `tl`
+
+### Commands
+- `w!listen` - Start listening for voice commands
+- `w!unlisten` - Stop listening
+- `/listen` - Slash command version
+
+**How to use:** Say **"play [song name]"** or **"tugtugin [song name]"** while the bot is listening!
+
+---
+**🌿 Weedify Bot - Day One Vibes!**
 
 4. **Get your Discord Bot Token**
 - Go to [Discord Developer Portal](https://discord.com/developers/applications)

@@ -1,0 +1,7 @@
+node_modules/
+.env
+temp_audio/
+dist/
+__pycache__/
+*.mp3
+*.log
