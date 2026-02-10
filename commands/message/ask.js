@@ -94,8 +94,10 @@ module.exports = {
             // USE PYTHON3 for Docker/Linux compatibility
             exec(`python3 "${pythonScriptPath}" "${safeAnswer}" "${audioPath}"`, async (error, stdout, stderr) => {
                 if (error) {
-                    console.error('TTS Error:', error);
-                    return message.channel.send("❌ **Weedify:** Voice box broke, my bad.");
+                    console.error('❌ TTS EXEC ERROR:', error);
+                    console.error('❌ TTS STDERR:', stderr);
+                    console.error('❌ TTS STDOUT:', stdout);
+                    return message.channel.send("❌ **Weedify:** Voice box broke, check console logs.");
                 }
 
                 // Play Audio

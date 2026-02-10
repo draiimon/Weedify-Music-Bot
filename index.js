@@ -41,40 +41,25 @@ client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
 const nodes = [
-    // 1. Shirayuki (Fastest for Asia/PH - Try Non-SSL if SSL fails)
-    {
-        host: "lavalink.shirayuki.xyz",
-        password: "youshallnotpass",
-        port: 2333, // Try port 2333 (Non-SSL)
-        secure: false
-    },
-    // 2. Karing Tech (Try different subdomain)
+    // 1. Karing Tech (SSL - Port 443 - Often reliable)
     {
         host: "lavalink.karing.tech",
         password: "youshallnotpass",
-        port: 2333,
-        secure: false
+        port: 443,
+        secure: true
     },
-    // 3. Darmabot (Reliable Global)
+    // 2. Lavalink Host (SSL - Port 443)
     {
-        host: "lavalink.darmabot.fr",
+        host: "lava.link",
         password: "youshallnotpass",
-        port: 2333,
-        secure: false
+        port: 443,
+        secure: true
     },
-    // 4. AjieDev (User Original - Try Non-SSL path)
+    // 3. Shirayuki (SSL - Port 443)
     {
-        host: "lava-all.ajieblogs.eu.org",
-        password: "https://dsc.gg/ajidevserver",
-        port: 80, // Try port 80
-        secure: false
-    },
-    // 5. Raw IP Fallback (If DNS fails) - Host determined dynamically if possible, but hardcoding public IP is risky.
-    // Instead use another robust public node.
-    {
-        host: "node.raiden.gg",
+        host: "lavalink.shirayuki.xyz",
         password: "youshallnotpass",
-        port: 5500,
+        port: 443,
         secure: true
     }
 ];
