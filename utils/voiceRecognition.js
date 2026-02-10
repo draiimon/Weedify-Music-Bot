@@ -56,26 +56,31 @@ class VoiceRecognition {
                 }, 2000);
             }
 
-            // Set up receiver
+            // Set up receiver - Subscribe to ALL users in the voice channel
             const receiver = connection.receiver;
 
-            // Listen to speaking events
-            receiver.speaking.on('start', async (userId) => {
-                const user = this.client.users.cache.get(userId);
-                if (!user || user.bot) return;
+            // Subscribe to each user currently in the voice channel
+            voiceChannel.members.forEach((member) => {
+                if (member.user.bot) return; // Skip bots
 
-                console.log(`🎤 ${user.username} started speaking`);
+                console.log(`👂 Subscribed to ${member.user.username}`);
 
-                // Create audio stream
-                const audioStream = receiver.subscribe(userId, {
+                const audioStream = receiver.subscribe(member.id, {
                     end: {
                         behavior: EndBehaviorType.AfterSilence,
-                        duration: 1000 // 1 second of silence to end
+                        duration: 1000 // 1 second of silence ends stream
                     }
                 });
 
-                // Process the audio
-                await this.processAudioStream(audioStream, guildId, userId, textChannel);
+                // Process audio when it arrives
+                audioStream.on('readable', () => {
+                    console.log(`🎤 ${member.user.username} is speaking`);
+                    this.processAudioStream(audioStream, guildId, member.id, textChannel);
+                });
+
+                audioStream.on('error', (error) => {
+                    console.error(`Audio stream error for ${member.user.username}:`, error);
+                });
             });
 
             this.activeListeners.set(guildId, { connection, textChannel });
