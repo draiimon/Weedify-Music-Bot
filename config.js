@@ -11,16 +11,16 @@ module.exports = {
         token: env.TOKEN || ""
     },
     mongodb: {
-        uri: env.MONGODB_URI || ""  
+        uri: env.MONGODB_URI || ""
     },
-    
+
     lavalink: {
-        host: env.LAVALINK_HOST || "lava-all.ajieblogs.eu.org", 
-        port: parseInt(env.LAVALINK_PORT) || 443,       
-        password: env.LAVALINK_PASSWORD || "https://dsc.gg/ajidevserver", 
+        host: env.LAVALINK_HOST || "lava-all.ajieblogs.eu.org",
+        port: parseInt(env.LAVALINK_PORT) || 443,
+        password: env.LAVALINK_PASSWORD || "https://dsc.gg/ajidevserver",
         secure: env.LAVALINK_SECURE === 'false' ? false : true
     },
-    
+
     bot: {
         prefix: env.BOT_PREFIX || "w!",
         ownerIds: ["1004206704994566164"],
@@ -28,13 +28,13 @@ module.exports = {
         supportServer: "https://discord.gg/weedify",
         defaultStatus: "🔥 Weedify - Tumugtog na mga par!"
     },
-    
+
     features: {
         autoplay: true,
         centralSystem: true,
         autoVcCreation: true,
         updateStatus: true,
-        autoDeaf: true,
+        autoDeaf: false,
         autoMute: false,
         resetOnEnd: true
     }
