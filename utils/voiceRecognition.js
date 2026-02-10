@@ -1,8 +1,9 @@
-const { joinVoiceChannel, EndBehaviorType } = require('@discordjs/voice');
+const { joinVoiceChannel, EndBehaviorType, createAudioPlayer, createAudioResource, StreamType, AudioPlayerStatus } = require('@discordjs/voice');
 const { OpusEncoder } = require('@discordjs/opus');
 const Groq = require('groq-sdk');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 class VoiceRecognition {
     constructor(client) {
@@ -39,13 +40,13 @@ class VoiceRecognition {
                 return { success: false, message: 'Already listening in this server!' };
             }
 
-            // Join voice channel
+            // Join voice channel - MUST BE UNMUTED TO SPEAK
             const voiceConnection = joinVoiceChannel({
                 channelId: voiceChannel.id,
                 guildId: guildId,
                 adapterCreator: guild.voiceAdapterCreator,
                 selfDeaf: false,
-                selfMute: true,
+                selfMute: false, // Changed to FALSE so bot can speak!
             });
 
             // Store connection info
@@ -260,7 +261,7 @@ class VoiceRecognition {
 
                 // If it's NOT a song request OR a command, generate an AI response
                 console.log(`💬 Conversational input detected: "${text}"`);
-                await this.generateAIResponse(text, textChannel, user);
+                await this.generateAIResponse(text, textChannel, user, guildId);
             }
 
         } catch (error) {
@@ -269,7 +270,7 @@ class VoiceRecognition {
         }
     }
 
-    async generateAIResponse(text, textChannel, user) {
+    async generateAIResponse(text, textChannel, user, guildId) {
         if (!this.groqClient) return;
 
         try {
@@ -299,12 +300,65 @@ class VoiceRecognition {
 
             const aiResponse = completion.choices[0]?.message?.content || "Yo, I didn't catch that.";
 
+            // Send Text
             await textChannel.send(`🗣️ **Weedify:** ${aiResponse}`);
+
+            // SPEAK RESPONSE (TTS)
+            if (guildId) {
+                await this.speakResponse(aiResponse, guildId);
+            }
 
         } catch (error) {
             console.error('Error generating AI response:', error);
-            // Fallback generic response if AI fails
-            // await textChannel.send(`🗣️ **Weedify:** My bad, I spaced out. What was that?`);
+        }
+    }
+
+    async speakResponse(text, guildId) {
+        try {
+            const listener = this.activeListeners.get(guildId);
+            if (!listener || !listener.voiceConnection) return;
+
+            const connection = listener.voiceConnection;
+            const audioPath = path.join(this.tempDir, `voice_reply_${Date.now()}.mp3`);
+            const pythonScriptPath = path.join(__dirname, '..', 'python', 'tts_gen.py');
+            const safeText = text.replace(/"/g, '\\"');
+
+            // 1. Generate Audio file
+            await new Promise((resolve, reject) => {
+                exec(`python3 "${pythonScriptPath}" "${safeText}" "${audioPath}"`, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error('TTS Exe Error:', error);
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+
+            // 2. Play Audio via Discord Voice
+            const player = createAudioPlayer();
+            const resource = createAudioResource(audioPath, { inputType: StreamType.Arbitrary });
+
+            // Subscribe logic
+            const subscription = connection.subscribe(player);
+
+            if (subscription) {
+                player.play(resource);
+                console.log(`🗣️ Speaking: "${text}"`);
+            }
+
+            // Cleanup
+            player.on(AudioPlayerStatus.Idle, () => {
+                if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+            });
+
+            player.on('error', err => {
+                console.error('Audio Player Error:', err);
+                if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+            });
+
+        } catch (error) {
+            console.error('Speak Response Error:', error);
         }
     }
 
