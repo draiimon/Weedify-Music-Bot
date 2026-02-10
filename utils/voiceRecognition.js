@@ -204,14 +204,14 @@ class VoiceRecognition {
                     const result = await this.client.playerHandler.playSong(player, songQuery, user);
 
                     if (result.type === 'track') {
-                        await textChannel.send(`✅ **Young Stunna:** Ayt bet, queuing up **${result.track.info.title}** for ya!`);
+                        await textChannel.send(`✅ **Weedify:** Ayt bet, queuing up **${result.track.info.title}** for ya!`);
                     } else if (result.type === 'playlist') {
-                        await textChannel.send(`✅ **Young Stunna:** Playlist secured! Loaded **${result.name}** with ${result.tracks} tracks.`);
+                        await textChannel.send(`✅ **Weedify:** Playlist secured! Loaded **${result.name}** with ${result.tracks} tracks.`);
                     } else {
-                        await textChannel.send(`❌ **Young Stunna:** Yo fam, couldn't find anything for "${songQuery}". Try again?`);
+                        await textChannel.send(`❌ **Weedify:** Yo fam, couldn't find anything for "${songQuery}". Try again?`);
                     }
                 } else {
-                    await textChannel.send(`❌ **Young Stunna:** I ain't in a voice channel yet. Hit me with that \`w!join\` first!`);
+                    await textChannel.send(`❌ **Weedify:** I ain't in a voice channel yet. Hit me with that \`w!join\` first!`);
                 }
             } else {
                 // --- EXPANDED VOICE COMMANDS ---
@@ -222,27 +222,27 @@ class VoiceRecognition {
                     // SKIP
                     if (['skip', 'next', 'lipat'].some(cmd => commandText.includes(cmd))) {
                         player.stop();
-                        return textChannel.send(`⏭️ **Young Stunna:** Skipped that track!`);
+                        return textChannel.send(`⏭️ **Weedify:** Skipped that track!`);
                     }
                     // SHUFFLE
                     if (['shuffle', 'mix', 'halo'].some(cmd => commandText.includes(cmd))) {
                         player.queue.shuffle();
-                        return textChannel.send(`🔀 **Young Stunna:** Shuffled the playlist, let's mix it up!`);
+                        return textChannel.send(`🔀 **Weedify:** Shuffled the playlist, let's mix it up!`);
                     }
                     // PAUSE
                     if (['pause', 'time out', 'hinto muna'].some(cmd => commandText.includes(cmd))) {
                         player.pause(true);
-                        return textChannel.send(`⏸️ **Young Stunna:** Paused. Holler when you ready.`);
+                        return textChannel.send(`⏸️ **Weedify:** Paused. Holler when you ready.`);
                     }
                     // RESUME
                     if (['resume', 'tuloy', 'continue'].some(cmd => commandText.includes(cmd))) {
                         player.pause(false);
-                        return textChannel.send(`▶️ **Young Stunna:** We back in action!`);
+                        return textChannel.send(`▶️ **Weedify:** We back in action!`);
                     }
                     // STOP / LEAVE
                     if (['stop music', 'hinto', 'stop playing'].some(cmd => commandText === cmd)) { // Strict match for stop
                         player.destroy();
-                        return textChannel.send(`Tk **Young Stunna:** Aight, I'm out. Peace!`);
+                        return textChannel.send(`Tk **Weedify:** Aight, I'm out. Peace!`);
                     }
                     // LOOP
                     if (['loop', 'repeat', 'ulit'].some(cmd => commandText.includes(cmd))) {
@@ -250,10 +250,10 @@ class VoiceRecognition {
                         // Toggle loop (Track -> Queue -> Off) - Simplified to Track/Off for voice
                         if (currentLoop === 'none') {
                             player.setLoop('track');
-                            return textChannel.send(`Tk **Young Stunna:** Looping this track!`);
+                            return textChannel.send(`Tk **Weedify:** Looping this track!`);
                         } else {
                             player.setLoop('none');
-                            return textChannel.send(`Tk **Young Stunna:** Loop off.`);
+                            return textChannel.send(`Tk **Weedify:** Loop off.`);
                         }
                     }
                 }
@@ -274,9 +274,9 @@ class VoiceRecognition {
 
         try {
             const prompt = `
-            You are "Young Stunna", a cool, laid-back, and hype AI assistant for a music bot. 
+            You are "Weedify", a cool, laid-back, and hype AI assistant for a music bot. 
             Language: TAGALOG / TAGLISH (Strict).
-            Your vibe is energetic, use Filipino slang (par, tol, omsim).
+            Your vibe is energetic, use Filipino slang (par, tol, omsim). (Young Stunna Attitude).
             
             Current User: ${user.username}
             User Input: "${text}"
@@ -289,7 +289,7 @@ class VoiceRecognition {
 
             const completion = await this.groqClient.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are Young Stunna, a Tagalog speaking music bot assistant." },
+                    { role: "system", content: "You are Weedify, a Tagalog speaking music bot assistant." },
                     { role: "user", content: prompt }
                 ],
                 model: "openai/gpt-oss-120b", // User requested specific model
@@ -299,12 +299,12 @@ class VoiceRecognition {
 
             const aiResponse = completion.choices[0]?.message?.content || "Yo, I didn't catch that.";
 
-            await textChannel.send(`🗣️ **Young Stunna:** ${aiResponse}`);
+            await textChannel.send(`🗣️ **Weedify:** ${aiResponse}`);
 
         } catch (error) {
             console.error('Error generating AI response:', error);
             // Fallback generic response if AI fails
-            // await textChannel.send(`🗣️ **Young Stunna:** My bad, I spaced out. What was that?`);
+            // await textChannel.send(`🗣️ **Weedify:** My bad, I spaced out. What was that?`);
         }
     }
 

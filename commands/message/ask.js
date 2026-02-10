@@ -19,14 +19,14 @@ module.exports = {
     execute: async (message, args, client) => {
         try {
             if (!args.length) {
-                return message.reply("❌ **Young Stunna:** Yo, you gotta ask me somethin'!");
+                return message.reply("❌ **Weedify:** Yo, you gotta ask me somethin'!");
             }
 
             const question = args.join(' ');
             const voiceChannel = message.member.voice.channel;
 
             if (!voiceChannel) {
-                return message.reply("❌ **Young Stunna:** Hoff into a voice channel first, fam!");
+                return message.reply("❌ **Weedify:** Hoff into a voice channel first, fam!");
             }
 
             // Join voice channel if not already connected
@@ -37,14 +37,14 @@ module.exports = {
             });
 
             // Ack
-            const thinkingMsg = await message.reply("🧠 **Young Stunna:** Thinking about that...");
+            const thinkingMsg = await message.reply("🧠 **Weedify:** Thinking about that...");
 
             // --- 1. Generate AI Response using Groq ---
             const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
             const systemPrompt = `
-            You are "Young Stunna", an AI assistant for the Weedify Music Bot.
-            Your persona: Cool, energetic, slang-heavy, friendly, helpful.
+            You are "Weedify", an AI assistant for the Weedify Music Bot.
+            Your persona: Cool, energetic, slang-heavy, friendly, helpful (Young Stunna Vibes).
             Language: TAGALOG / TAGLISH (Required).
             
             System Info:
@@ -72,8 +72,8 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor('#00FF00')
                 .setTitle(`❓ Question: ${question}`)
-                .setDescription(`🗣️ **Young Stunna:** ${answer}`)
-                .setFooter({ text: 'Young Stunna • Powered by Groq AI' }); // Custom Footer
+                .setDescription(`🗣️ **Weedify:** ${answer}`)
+                .setFooter({ text: 'Weedify • Powered by Groq AI' }); // Custom Footer
 
             await thinkingMsg.edit({ content: null, embeds: [embed] });
 
@@ -95,7 +95,7 @@ module.exports = {
             exec(`python3 "${pythonScriptPath}" "${safeAnswer}" "${audioPath}"`, async (error, stdout, stderr) => {
                 if (error) {
                     console.error('TTS Error:', error);
-                    return message.channel.send("❌ **Young Stunna:** Voice box broke, my bad.");
+                    return message.channel.send("❌ **Weedify:** Voice box broke, my bad.");
                 }
 
                 // Play Audio
