@@ -1,11 +1,10 @@
 services:
   - type: web
     name: weedify-bot
-    env: node
-    buildCommand: "./render-build.sh"
-    startCommand: "node index.js"
+    env: docker
+    plan: free
     envVars:
-      - key: DISCORD_TOKEN
+      - key: TOKEN
         sync: false
       - key: MONGODB_URI
         sync: false
