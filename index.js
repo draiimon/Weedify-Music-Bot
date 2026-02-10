@@ -15,6 +15,15 @@ const express = require('express');
 
 // Imports
 const config = require('./config');
+
+// FORCE LOAD LIBSODIUM BEFORE ANYTHING ELSE
+try {
+    require('libsodium-wrappers');
+    console.log("✅ libsodium-wrappers loaded manually.");
+} catch (e) {
+    console.error("❌ Failed to load libsodium-wrappers:", e);
+}
+
 const connectDatabase = require('./database/connection');
 const PlayerHandler = require('./utils/player');
 const StatusManager = require('./utils/statusManager');
@@ -41,26 +50,33 @@ client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
 const nodes = [
-    // 1. Karing Tech (SSL - Port 443) - Verified Stable
+    // 1. AjieBlogs v4 (SSL - Port 443) - From BotXLab List
     {
-        host: "lavalink.karing.tech",
-        password: "youshallnotpass",
+        host: "lava-v4.ajieblogs.eu.org",
+        password: "https://dsc.gg/ajidevserver",
         port: 443,
         secure: true
     },
-    // 2. Shirayuki (SSL - Port 443)
+    // 2. DivaHost (Non-SSL - Port 60002)
     {
-        host: "lavalink.shirayuki.xyz",
-        password: "youshallnotpass",
+        host: "lavalink.divahost.net",
+        password: "divahostv4",
+        port: 60002,
+        secure: false
+    },
+    // 3. Musik Hosting (SSL - Port 443)
+    {
+        host: "lavalink-v2.pericsq.ro",
+        password: "wwweasycodero",
         port: 443,
         secure: true
     },
-    // 3. Voltex (SSL - Port 443)
+    // 4. Sanode US (Non-SSL - Port 25568)
     {
-        host: "lava.voltex.rocks",
-        password: "youshallnotpass",
-        port: 443,
-        secure: true
+        host: "us.sanode.xyz",
+        password: "discord.gg/W2GheK3F9m",
+        port: 25568,
+        secure: false
     }
 ];
 
