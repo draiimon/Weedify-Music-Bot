@@ -59,6 +59,16 @@ class VoiceRecognition {
             // Start listening for speech
             this.setupSpeechRecognition(guildId, voiceConnection, textChannel);
 
+            // DOUBLE CHECK: Force undeafen via Discord.js to be 100% sure
+            const discordGuild = this.client.guilds.cache.get(guildId);
+            if (discordGuild && discordGuild.members.me && discordGuild.members.me.voice) {
+                setTimeout(() => {
+                    try {
+                        discordGuild.members.me.voice.setDeaf(false).catch(err => console.error(`Failed to force undeafen (Voice): ${err.message}`));
+                    } catch (e) { console.error('Force undeafen error (Voice):', e); }
+                }, 2000);
+            }
+
             console.log(`🎤 Started listening in ${guild.name} (${voiceChannel.name})`);
             return { success: true, message: `Now listening for voice requests in ${voiceChannel.name}!\nSay "play [song name]" to request music.` };
 
