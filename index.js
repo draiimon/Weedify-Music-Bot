@@ -41,26 +41,40 @@ client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
 const nodes = [
-    // Node 1: Karing Tech (Stable)
+    // Node 1: Karing Tech (US/Global - High Stability)
     {
         host: "lavalink.karing.tech",
         password: "youshallnotpass",
         port: 443,
         secure: true
     },
-    // Node 2: Lava.link (Backup)
+    // Node 2: Shirayuki (Japan/Asia - Good for PH)
     {
-        host: "v3.lavalink.ksii.moe",
+        host: "lavalink.shirayuki.xyz",
         password: "youshallnotpass",
         port: 443,
         secure: true
     },
-    // Node 3: User's Original (Low Priority)
+    // Node 3: AjieDev (User's Choice - PH/Asia)
     {
-        host: config.lavalink.host,
-        password: config.lavalink.password,
-        port: config.lavalink.port,
-        secure: config.lavalink.secure
+        host: "lava-all.ajieblogs.eu.org",
+        password: "https://dsc.gg/ajidevserver",
+        port: 443,
+        secure: true
+    },
+    // Node 4: Lexnet (Europe - Backup)
+    {
+        host: "lavalink.lexnet.cc",
+        password: "lexn3t",
+        port: 443,
+        secure: true
+    },
+    // Node 5: Bodemechanic (Global Backup)
+    {
+        host: "lavalink.bodemechanic.com",
+        password: "youshallnotpass",
+        port: 443,
+        secure: true
     }
 ];
 
