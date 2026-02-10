@@ -18,7 +18,7 @@ module.exports = {
 
             // Initialize voice recognition if not already done
             if (!client.voiceRecognition) {
-                const VoiceRecognition = require('../utils/voiceRecognition');
+                const VoiceRecognition = require('../../utils/voiceRecognition');
                 client.voiceRecognition = new VoiceRecognition(client);
             }
 
