@@ -2,7 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const { createAudioResource, createAudioPlayer, AudioPlayerStatus, StreamType, joinVoiceChannel } = require('@discordjs/voice');
-const { EdgeTTS } = require('edge-tts-ga'); // Using the package installed
+
 const Groq = require('groq-sdk');
 // If EdgeTTS is not available as 'edge-tts-ga', check if 'edge-tts' worked.
 // Actually, let's use a simpler approach if the package is tricky.
