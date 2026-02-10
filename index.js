@@ -41,33 +41,26 @@ client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
 const nodes = [
-    // 1. Karing Tech (Non-SSL - Port 80/2333) - Trying HTTP to bypass SSL/DNS issues
+    // 1. Karing Tech (SSL - Port 443) - Verified Stable
     {
         host: "lavalink.karing.tech",
         password: "youshallnotpass",
-        port: 2333,
-        secure: false
+        port: 443,
+        secure: true
     },
-    // 2. Darmabot (Non-SSL)
-    {
-        host: "lavalink.darmabot.fr",
-        password: "youshallnotpass",
-        port: 2333,
-        secure: false
-    },
-    // 3. Shirayuki (Non-SSL)
+    // 2. Shirayuki (SSL - Port 443)
     {
         host: "lavalink.shirayuki.xyz",
         password: "youshallnotpass",
-        port: 2333,
-        secure: false
+        port: 443,
+        secure: true
     },
-    // 4. Public Node (Voltex)
+    // 3. Voltex (SSL - Port 443)
     {
         host: "lava.voltex.rocks",
         password: "youshallnotpass",
-        port: 2333,
-        secure: false
+        port: 443,
+        secure: true
     }
 ];
 
