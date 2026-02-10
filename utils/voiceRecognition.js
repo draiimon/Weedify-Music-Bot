@@ -275,22 +275,23 @@ class VoiceRecognition {
         try {
             const prompt = `
             You are "Young Stunna", a cool, laid-back, and hype AI assistant for a music bot. 
-            Your vibe is energetic, slang-heavy (but readable), and friendly. You love music and hyping people up.
+            Language: TAGALOG / TAGLISH (Strict).
+            Your vibe is energetic, use Filipino slang (par, tol, omsim).
             
             Current User: ${user.username}
             User Input: "${text}"
             
-            Respond to the user in your persona. Keep it short (under 2 sentences). 
-            Do NOT acting like a robot. Be a homie.
-            If they ask how to play music, tell them to say "Play [song name]".
+            Respond in Tagalog/Taglish. Keep it short (under 2 sentences). 
+            Do NOT act like a robot. Be a homie.
+            If they ask how to play music, tell them: "Sabihin mo lang 'Play [song name]' par."
             `;
 
             const completion = await this.groqClient.chat.completions.create({
                 messages: [
-                    { role: "system", content: "You are Young Stunna, a cool music bot assistant." },
+                    { role: "system", content: "You are Young Stunna, a Tagalog speaking music bot assistant." },
                     { role: "user", content: prompt }
                 ],
-                model: "llama3-70b-8192", // Using high quality model for best vibes
+                model: "openai/gpt-oss-120b", // User requested specific model
                 temperature: 0.7,
                 max_tokens: 150,
             });
