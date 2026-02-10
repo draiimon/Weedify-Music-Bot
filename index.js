@@ -41,39 +41,40 @@ client.mentionCommands = new Collection();
 
 // --- 2. Audio System (Riffy/Lavalink) ---
 const nodes = [
-    // Node 1: Karing Tech (US/Global - High Stability)
-    {
-        host: "lavalink.karing.tech",
-        password: "youshallnotpass",
-        port: 443,
-        secure: true
-    },
-    // Node 2: Shirayuki (Japan/Asia - Good for PH)
+    // 1. Shirayuki (Fastest for Asia/PH - Try Non-SSL if SSL fails)
     {
         host: "lavalink.shirayuki.xyz",
         password: "youshallnotpass",
-        port: 443,
-        secure: true
+        port: 2333, // Try port 2333 (Non-SSL)
+        secure: false
     },
-    // Node 3: AjieDev (User's Choice - PH/Asia)
+    // 2. Karing Tech (Try different subdomain)
+    {
+        host: "lavalink.karing.tech",
+        password: "youshallnotpass",
+        port: 2333,
+        secure: false
+    },
+    // 3. Darmabot (Reliable Global)
+    {
+        host: "lavalink.darmabot.fr",
+        password: "youshallnotpass",
+        port: 2333,
+        secure: false
+    },
+    // 4. AjieDev (User Original - Try Non-SSL path)
     {
         host: "lava-all.ajieblogs.eu.org",
         password: "https://dsc.gg/ajidevserver",
-        port: 443,
-        secure: true
+        port: 80, // Try port 80
+        secure: false
     },
-    // Node 4: Lexnet (Europe - Backup)
+    // 5. Raw IP Fallback (If DNS fails) - Host determined dynamically if possible, but hardcoding public IP is risky.
+    // Instead use another robust public node.
     {
-        host: "lavalink.lexnet.cc",
-        password: "lexn3t",
-        port: 443,
-        secure: true
-    },
-    // Node 5: Bodemechanic (Global Backup)
-    {
-        host: "lavalink.bodemechanic.com",
+        host: "node.raiden.gg",
         password: "youshallnotpass",
-        port: 443,
+        port: 5500,
         secure: true
     }
 ];
