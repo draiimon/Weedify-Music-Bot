@@ -130,6 +130,19 @@ app.listen(PORT, '0.0.0.0', () => {
         process.exit(1);
     }
 
-    await client.login(token);
-    console.log(`🤖 Logged in as ${client.user?.tag || 'Unknown'}`);
+    console.log(`🔐 Token found. Length: ${token.length}. Starts with: ${token.substring(0, 5)}...`);
+
+    // Explicit Ready Event to debug "Offline" status
+    client.once('ready', (c) => {
+        console.log(`✅ [DIRECT DEBUG] Ready! Logged in as ${c.user.tag}`);
+        c.user.setActivity('Weedify 2026', { type: 4 }); // Custom Status
+        c.user.setStatus('online');
+    });
+
+    try {
+        await client.login(token);
+        console.log(`🤖 Login function called... waiting for Ready event.`);
+    } catch (e) {
+        console.error('❌ LOGIN FAILED:', e);
+    }
 })();
