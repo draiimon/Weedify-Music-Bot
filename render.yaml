@@ -3,7 +3,7 @@ services:
     name: weedify-bot
     env: node
     buildCommand: "./render-build.sh"
-    startCommand: "node main.js"
+    startCommand: "node index.js"
     envVars:
       - key: DISCORD_TOKEN
         sync: false
