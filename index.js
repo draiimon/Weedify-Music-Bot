@@ -20,6 +20,8 @@ const PlayerHandler = require('./utils/player');
 const StatusManager = require('./utils/statusManager');
 const GarbageCollector = require('./utils/garbageCollector');
 
+console.log('🚀 INITIALIZING WEEDIFY 2026 SYSTEM...');
+
 // --- 1. Client Initialization ---
 const client = new Client({
     intents: [
@@ -27,9 +29,9 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
-        // GatewayIntentBits.MessageContent, // <--- Commented out for testing
-        // GatewayIntentBits.GuildPresences  // <--- Commented out for testing
+        GatewayIntentBits.GuildPresences
     ]
 });
 
@@ -45,6 +47,8 @@ const nodes = [{
     secure: config.lavalink.secure
 }];
 
+console.log(`🎵 Configuring Lavalink Node: ${nodes[0].host}`);
+
 client.riffy = new Riffy(client, nodes, {
     send: (payload) => {
         const guild = client.guilds.cache.get(payload.d.guild_id);
@@ -54,54 +58,62 @@ client.riffy = new Riffy(client, nodes, {
     restVersion: "v4"
 });
 
-// Audio Events
-client.riffy.on('nodeConnect', node => console.log(`🎵 [Lavalink] Node "${node.name}" Connected`));
-client.riffy.on('nodeError', (node, error) => console.error(`🔴 [Lavalink] Node "${node.name}" Error:`, error.message));
+// Audio Events - VERBOSE LOGGING
+client.riffy.on('nodeConnect', node => console.log(`✅ [Lavalink] Node "${node.name}" Connected!`));
+client.riffy.on('nodeError', (node, error) => console.error(`🔴 [Lavalink] Node "${node.name}" Error: ${error.message}`));
+client.riffy.on('nodeDisconnect', (node, reason) => console.warn(`⚠️ [Lavalink] Node "${node.name}" Disconnected: ${JSON.stringify(reason)}`));
+client.riffy.on('debug', msg => console.log(`🐞 [Lavalink Debug] ${msg}`));
+
 client.on('raw', d => {
-    if (['VOICE_STATE_UPDATE', 'VOICE_SERVER_UPDATE'].includes(d.t)) client.riffy.updateVoiceState(d);
+    if (['VOICE_STATE_UPDATE', 'VOICE_SERVER_UPDATE'].includes(d.t)) {
+        client.riffy.updateVoiceState(d);
+    }
 });
 
 // --- 3. Command & Event Loader ---
-const loadFiles = (dir) => fs.readdirSync(path.join(__dirname, dir)).filter(f => f.endsWith('.js'));
+const loadFiles = (dir) => {
+    const p = path.join(__dirname, dir);
+    if (!fs.existsSync(p)) return [];
+    return fs.readdirSync(p).filter(f => f.endsWith('.js'));
+};
 
 // Load Message Commands
-if (fs.existsSync(path.join(__dirname, 'commands/message'))) {
-    loadFiles('commands/message').forEach(file => {
-        const cmd = require(`./commands/message/${file}`);
-        client.commands.set(cmd.name, cmd);
-    });
-}
+loadFiles('commands/message').forEach(file => {
+    const cmd = require(`./commands/message/${file}`);
+    client.commands.set(cmd.name, cmd);
+});
 
 // Load Slash Commands
-if (fs.existsSync(path.join(__dirname, 'commands/slash'))) {
-    loadFiles('commands/slash').forEach(file => {
-        const cmd = require(`./commands/slash/${file}`);
-        client.slashCommands.set(cmd.data.name, cmd);
-    });
-}
+loadFiles('commands/slash').forEach(file => {
+    const cmd = require(`./commands/slash/${file}`);
+    client.slashCommands.set(cmd.data.name, cmd);
+});
 
 // Load Events
-if (fs.existsSync(path.join(__dirname, 'events'))) {
-    loadFiles('events').forEach(file => {
-        const event = require(`./events/${file}`);
-        if (event.once) client.once(event.name, (...args) => event.execute(...args, client));
-        else client.on(event.name, (...args) => event.execute(...args, client));
-    });
-}
+loadFiles('events').forEach(file => {
+    const event = require(`./events/${file}`);
+    if (event.name === 'clientReady') {
+        console.warn(`⚠️ Correcting event name 'clientReady' to 'ready' for ${file}`);
+        event.name = 'ready'; // AUTO-FIX INTENT TYPO
+    }
+    if (event.once) client.once(event.name, (...args) => event.execute(...args, client));
+    else client.on(event.name, (...args) => event.execute(...args, client));
+});
+
+console.log(`📦 Loaded ${client.commands.size} commands and ${client.slashCommands.size} slash commands.`);
 
 // --- 4. Subsystems ---
 client.statusManager = new StatusManager(client);
-client.playerHandler = new PlayerHandler(client); // Uses Riffy inside
+client.playerHandler = new PlayerHandler(client);
 client.playerHandler.initializeEvents();
 GarbageCollector.init(client);
 
-// --- 5. Error Handling & 2026 Stability ---
+// --- 5. Error Handling & Stability ---
 process.on('uncaughtException', err => console.error('💥 Uncaught Exception:', err));
 process.on('unhandledRejection', err => console.error('💥 Unhandled Rejection:', err));
 
 client.on('debug', info => {
-    // Only log critical debug info or heartbeat (optional)
-    if (info.includes('Heartbeat')) console.log('💓 Heartbeat verified');
+    if (info.includes('Heartbeat') || info.includes('401')) console.log(`🐞 [Discord Debug] ${info}`);
 });
 
 // --- 6. Render Keep-Alive Server ---
@@ -117,8 +129,6 @@ app.listen(PORT, '0.0.0.0', () => {
 
 // --- 7. Bootstrap ---
 (async () => {
-    console.log('🚀 Booting up Weedify 2026 System...');
-
     // DB
     const db = await connectDatabase();
     if (db) console.log('💾 Database Connected');
@@ -130,18 +140,17 @@ app.listen(PORT, '0.0.0.0', () => {
         process.exit(1);
     }
 
-    console.log(`🔐 Token found. Length: ${token.length}. Starts with: ${token.substring(0, 5)}...`);
+    console.log(`🔐 Token Check: ${token.substring(0, 5)}... (Length: ${token.length})`);
 
-    // Explicit Ready Event to debug "Offline" status
+    // DEBUG: Explicit Ready Log
     client.once('ready', (c) => {
         console.log(`✅ [DIRECT DEBUG] Ready! Logged in as ${c.user.tag}`);
-        c.user.setActivity('Weedify 2026', { type: 4 }); // Custom Status
-        c.user.setStatus('online');
+        console.log('🔄 Initializing Riffy/Lavalink...');
+        client.riffy.init(c.user.id);
     });
 
     try {
         await client.login(token);
-        console.log(`🤖 Login function called... waiting for Ready event.`);
     } catch (e) {
         console.error('❌ LOGIN FAILED:', e);
     }
